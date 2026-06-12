@@ -1,0 +1,1732 @@
+{
+  "info": {
+    "name": "TicketPremium - FIFA World Cup 2026",
+    "description": "Colección de pruebas para los 3 sistemas SOAP del proyecto TicketPremium.\n\nPuertos:\n• AppFIFA → localhost:5001\n• CoreBancario → localhost:5002\n• TicketPremium → localhost:5003\n\nRequerimientos:\n• SQL Server corriendo (docker compose up -d)\n• Los 3 proyectos ejecutándose\n\nNOTA: Los IDs de asientos usan el mismo formato que AppFIFA (AS-L001-01). Son idénticos en ambos sistemas. El CompraService los traduce automáticamente a IDs de AppFIFA.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. AppFIFA (5001)",
+      "item": [
+        {
+          "name": "RF-01: Listar Partidos Disponibles",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Contiene partidos', () => pm.response.text().includes('P001') || pm.response.text().includes('PartidoDisponible'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": "http://tempuri.org/IFifaPartidoService/ListarPartidosDisponibles"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <ListarPartidosDisponibles xmlns=\"http://tempuri.org/\"/>\n  </soap:Body>\n</soap:Envelope>"
+            },
+            "url": {
+              "raw": "http://localhost:5001/FifaPartidoService.svc",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5001",
+              "path": [
+                "FifaPartidoService.svc"
+              ]
+            }
+          }
+        },
+        {
+          "name": "RF-02: Listar Localidades por Partido (P001)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Contiene localidades', () => pm.response.text().includes('L001') || pm.response.text().includes('LocalidadDetalle'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": "http://tempuri.org/IFifaAsientoService/ListarLocalidadesPorPartido"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <ListarLocalidadesPorPartido xmlns=\"http://tempuri.org/\">\n      <codigoPartido>P001</codigoPartido>\n    </ListarLocalidadesPorPartido>\n  </soap:Body>\n</soap:Envelope>"
+            },
+            "url": {
+              "raw": "http://localhost:5001/FifaAsientoService.svc",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5001",
+              "path": [
+                "FifaAsientoService.svc"
+              ]
+            }
+          }
+        },
+        {
+          "name": "RF-03: Reservar Asiento (AS-L001-01)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Reserva exitosa', () => pm.response.text().includes('true') || pm.response.text().includes('Exito'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": "http://tempuri.org/IFifaAsientoService/ReservarAsiento"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <ReservarAsiento xmlns=\"http://tempuri.org/\">\n      <codigoAsiento>AS-L001-01</codigoAsiento>\n    </ReservarAsiento>\n  </soap:Body>\n</soap:Envelope>"
+            },
+            "url": {
+              "raw": "http://localhost:5001/FifaAsientoService.svc",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5001",
+              "path": [
+                "FifaAsientoService.svc"
+              ]
+            }
+          }
+        },
+        {
+          "name": "RF-03: Reservar Mismo Asiento (debe fallar - locking optimista)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 500 por FaultException', () => pm.response.to.have.status(500));",
+                  "pm.test('Contiene ASIENTO_NO_DISPONIBLE', () => pm.response.text().includes('ASIENTO_NO_DISPONIBLE'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": "http://tempuri.org/IFifaAsientoService/ReservarAsiento"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <ReservarAsiento xmlns=\"http://tempuri.org/\">\n      <codigoAsiento>AS-L001-01</codigoAsiento>\n    </ReservarAsiento>\n  </soap:Body>\n</soap:Envelope>"
+            },
+            "url": {
+              "raw": "http://localhost:5001/FifaAsientoService.svc",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5001",
+              "path": [
+                "FifaAsientoService.svc"
+              ]
+            }
+          }
+        },
+        {
+          "name": "RF-05: Liberar Asiento (AS-L001-01) - Compensación",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": "http://tempuri.org/IFifaAsientoService/LiberarAsiento"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <LiberarAsiento xmlns=\"http://tempuri.org/\">\n      <codigoAsiento>AS-L001-01</codigoAsiento>\n    </LiberarAsiento>\n  </soap:Body>\n</soap:Envelope>"
+            },
+            "url": {
+              "raw": "http://localhost:5001/FifaAsientoService.svc",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5001",
+              "path": [
+                "FifaAsientoService.svc"
+              ]
+            }
+          }
+        },
+        {
+          "name": "RF-05: Liberar Asiento (idempotente - ya está LIBRE)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 (idempotente)', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": "http://tempuri.org/IFifaAsientoService/LiberarAsiento"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <LiberarAsiento xmlns=\"http://tempuri.org/\">\n      <codigoAsiento>AS-L001-01</codigoAsiento>\n    </LiberarAsiento>\n  </soap:Body>\n</soap:Envelope>"
+            },
+            "url": {
+              "raw": "http://localhost:5001/FifaAsientoService.svc",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5001",
+              "path": [
+                "FifaAsientoService.svc"
+              ]
+            }
+          }
+        },
+        {
+          "name": "RF-06: Expirar Reservas Vencidas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": "http://tempuri.org/IFifaAsientoService/ExpirarReservasVencidas"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <ExpirarReservasVencidas xmlns=\"http://tempuri.org/\"/>\n  </soap:Body>\n</soap:Envelope>"
+            },
+            "url": {
+              "raw": "http://localhost:5001/FifaAsientoService.svc",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5001",
+              "path": [
+                "FifaAsientoService.svc"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. CoreBancario (5002)",
+      "item": [
+        {
+          "name": "RF-07: Verificar Sujeto Crédito → Juan (✅ elegible)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Aprobado true', () => pm.response.text().includes('true') && pm.response.text().includes('Aprobado'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": "http://tempuri.org/ICreditoService/VerificarSujetoCredito"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <VerificarSujetoCredito xmlns=\"http://tempuri.org/\">\n      <cedula>1712345678</cedula>\n    </VerificarSujetoCredito>\n  </soap:Body>\n</soap:Envelope>"
+            },
+            "url": {
+              "raw": "http://localhost:5002/CreditoService.svc",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5002",
+              "path": [
+                "CreditoService.svc"
+              ]
+            }
+          }
+        },
+        {
+          "name": "RF-07: Verificar Sujeto Crédito → María (✅ elegible)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Aprobado true', () => !pm.response.text().includes('fault'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": "http://tempuri.org/ICreditoService/VerificarSujetoCredito"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <VerificarSujetoCredito xmlns=\"http://tempuri.org/\">\n      <cedula>1712345679</cedula>\n    </VerificarSujetoCredito>\n  </soap:Body>\n</soap:Envelope>"
+            },
+            "url": {
+              "raw": "http://localhost:5002/CreditoService.svc",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5002",
+              "path": [
+                "CreditoService.svc"
+              ]
+            }
+          }
+        },
+        {
+          "name": "RF-07: Verificar → Pedro (❌ masculino <25 años)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Aprobado false', () => pm.response.text().includes('false') || pm.response.text().includes('fault'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": "http://tempuri.org/ICreditoService/VerificarSujetoCredito"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <VerificarSujetoCredito xmlns=\"http://tempuri.org/\">\n      <cedula>1712345680</cedula>\n    </VerificarSujetoCredito>\n  </soap:Body>\n</soap:Envelope>"
+            },
+            "url": {
+              "raw": "http://localhost:5002/CreditoService.svc",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5002",
+              "path": [
+                "CreditoService.svc"
+              ]
+            }
+          }
+        },
+        {
+          "name": "RF-07: Verificar → Ana (❌ inactivo)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Aprobado false', () => pm.response.text().includes('false') || pm.response.text().includes('fault'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": "http://tempuri.org/ICreditoService/VerificarSujetoCredito"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <VerificarSujetoCredito xmlns=\"http://tempuri.org/\">\n      <cedula>1712345681</cedula>\n    </VerificarSujetoCredito>\n  </soap:Body>\n</soap:Envelope>"
+            },
+            "url": {
+              "raw": "http://localhost:5002/CreditoService.svc",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5002",
+              "path": [
+                "CreditoService.svc"
+              ]
+            }
+          }
+        },
+        {
+          "name": "RF-07: Verificar → Carlos (❌ crédito activo)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Aprobado false', () => pm.response.text().includes('false') || pm.response.text().includes('fault'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": "http://tempuri.org/ICreditoService/VerificarSujetoCredito"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <VerificarSujetoCredito xmlns=\"http://tempuri.org/\">\n      <cedula>1712345682</cedula>\n    </VerificarSujetoCredito>\n  </soap:Body>\n</soap:Envelope>"
+            },
+            "url": {
+              "raw": "http://localhost:5002/CreditoService.svc",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5002",
+              "path": [
+                "CreditoService.svc"
+              ]
+            }
+          }
+        },
+        {
+          "name": "RF-08: Obtener Monto Máximo → Juan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Tiene monto máximo', () => pm.response.text().includes('MontoMaximo'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": "http://tempuri.org/ICreditoService/ObtenerMontoMaximo"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <ObtenerMontoMaximo xmlns=\"http://tempuri.org/\">\n      <cedula>1712345678</cedula>\n    </ObtenerMontoMaximo>\n  </soap:Body>\n</soap:Envelope>"
+            },
+            "url": {
+              "raw": "http://localhost:5002/CreditoService.svc",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5002",
+              "path": [
+                "CreditoService.svc"
+              ]
+            }
+          }
+        },
+        {
+          "name": "RF-09: Registrar Crédito → Juan ($5000, 12 meses)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Crédito registrado', () => pm.response.text().includes('Exitoso') || pm.response.text().includes('true'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": "http://tempuri.org/ICreditoService/RegistrarCredito"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <RegistrarCredito xmlns=\"http://tempuri.org/\">\n      <cedula>1712345678</cedula>\n      <monto>5000</monto>\n      <plazoMeses>12</plazoMeses>\n    </RegistrarCredito>\n  </soap:Body>\n</soap:Envelope>"
+            },
+            "url": {
+              "raw": "http://localhost:5002/CreditoService.svc",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5002",
+              "path": [
+                "CreditoService.svc"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. TicketPremium - CRUDs (5003)",
+      "item": [
+        {
+          "name": "Paises - RF-15",
+          "item": [
+            {
+              "name": "Listar Paises",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "text/xml; charset=utf-8"
+                  },
+                  {
+                    "key": "SOAPAction",
+                    "value": "http://tempuri.org/IPaisService/ListarPaises"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <ListarPaises xmlns=\"http://tempuri.org/\"/>\n  </soap:Body>\n</soap:Envelope>"
+                },
+                "url": {
+                  "raw": "http://localhost:5003/PaisService.svc",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "5003",
+                  "path": [
+                    "PaisService.svc"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Obtener Pais (USA)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "text/xml; charset=utf-8"
+                  },
+                  {
+                    "key": "SOAPAction",
+                    "value": "http://tempuri.org/IPaisService/ObtenerPais"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <ObtenerPais xmlns=\"http://tempuri.org/\">\n      <codigo>USA</codigo>\n    </ObtenerPais>\n  </soap:Body>\n</soap:Envelope>"
+                },
+                "url": {
+                  "raw": "http://localhost:5003/PaisService.svc",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "5003",
+                  "path": [
+                    "PaisService.svc"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Crear Pais (ECU)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "text/xml; charset=utf-8"
+                  },
+                  {
+                    "key": "SOAPAction",
+                    "value": "http://tempuri.org/IPaisService/CrearPais"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <CrearPais xmlns=\"http://tempuri.org/\">\n      <pais xmlns:a=\"http://schemas.datacontract.org/2004/07/ec.edu.monster.TicketPremium.Contracts\" xmlns:i=\"http://www.w3.org/2001/XMLSchema-instance\">\n        <a:Codigo>ECU</a:Codigo>\n        <a:Nombre>Ecuador</a:Nombre>\n        <a:Continente>América</a:Continente>\n      </pais>\n    </CrearPais>\n  </soap:Body>\n</soap:Envelope>"
+                },
+                "url": {
+                  "raw": "http://localhost:5003/PaisService.svc",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "5003",
+                  "path": [
+                    "PaisService.svc"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Actualizar Pais (ECU)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "text/xml; charset=utf-8"
+                  },
+                  {
+                    "key": "SOAPAction",
+                    "value": "http://tempuri.org/IPaisService/ActualizarPais"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <ActualizarPais xmlns=\"http://tempuri.org/\">\n      <pais xmlns:a=\"http://schemas.datacontract.org/2004/07/ec.edu.monster.TicketPremium.Contracts\" xmlns:i=\"http://www.w3.org/2001/XMLSchema-instance\">\n        <a:Codigo>ECU</a:Codigo>\n        <a:Nombre>República del Ecuador</a:Nombre>\n        <a:Continente>Sudamérica</a:Continente>\n      </pais>\n    </ActualizarPais>\n  </soap:Body>\n</soap:Envelope>"
+                },
+                "url": {
+                  "raw": "http://localhost:5003/PaisService.svc",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "5003",
+                  "path": [
+                    "PaisService.svc"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Eliminar Pais (ECU)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "text/xml; charset=utf-8"
+                  },
+                  {
+                    "key": "SOAPAction",
+                    "value": "http://tempuri.org/IPaisService/EliminarPais"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <EliminarPais xmlns=\"http://tempuri.org/\">\n      <codigo>ECU</codigo>\n    </EliminarPais>\n  </soap:Body>\n</soap:Envelope>"
+                },
+                "url": {
+                  "raw": "http://localhost:5003/PaisService.svc",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "5003",
+                  "path": [
+                    "PaisService.svc"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Estadios - RF-16",
+          "item": [
+            {
+              "name": "Listar Estadios",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "text/xml; charset=utf-8"
+                  },
+                  {
+                    "key": "SOAPAction",
+                    "value": "http://tempuri.org/IEstadioService/ListarEstadios"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <ListarEstadios xmlns=\"http://tempuri.org/\"/>\n  </soap:Body>\n</soap:Envelope>"
+                },
+                "url": {
+                  "raw": "http://localhost:5003/EstadioService.svc",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "5003",
+                  "path": [
+                    "EstadioService.svc"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Obtener Estadio (EST-001)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "text/xml; charset=utf-8"
+                  },
+                  {
+                    "key": "SOAPAction",
+                    "value": "http://tempuri.org/IEstadioService/ObtenerEstadio"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <ObtenerEstadio xmlns=\"http://tempuri.org/\">\n      <codigo>EST-001</codigo>\n    </ObtenerEstadio>\n  </soap:Body>\n</soap:Envelope>"
+                },
+                "url": {
+                  "raw": "http://localhost:5003/EstadioService.svc",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "5003",
+                  "path": [
+                    "EstadioService.svc"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Crear Estadio (EST-004)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "text/xml; charset=utf-8"
+                  },
+                  {
+                    "key": "SOAPAction",
+                    "value": "http://tempuri.org/IEstadioService/CrearEstadio"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <CrearEstadio xmlns=\"http://tempuri.org/\">\n      <estadio xmlns:a=\"http://schemas.datacontract.org/2004/07/ec.edu.monster.TicketPremium.Contracts\" xmlns:i=\"http://www.w3.org/2001/XMLSchema-instance\">\n        <a:Codigo>EST-004</a:Codigo>\n        <a:Nombre>BC Place</a:Nombre>\n        <a:Ciudad>Vancouver</a:Ciudad>\n        <a:CapacidadTotal>54320</a:CapacidadTotal>\n        <a:PaisCodigo>CAN</a:PaisCodigo>\n      </estadio>\n    </CrearEstadio>\n  </soap:Body>\n</soap:Envelope>"
+                },
+                "url": {
+                  "raw": "http://localhost:5003/EstadioService.svc",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "5003",
+                  "path": [
+                    "EstadioService.svc"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Actualizar Estadio (EST-004)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "text/xml; charset=utf-8"
+                  },
+                  {
+                    "key": "SOAPAction",
+                    "value": "http://tempuri.org/IEstadioService/ActualizarEstadio"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <ActualizarEstadio xmlns=\"http://tempuri.org/\">\n      <estadio xmlns:a=\"http://schemas.datacontract.org/2004/07/ec.edu.monster.TicketPremium.Contracts\" xmlns:i=\"http://www.w3.org/2001/XMLSchema-instance\">\n        <a:Codigo>EST-004</a:Codigo>\n        <a:Nombre>BC Place Stadium</a:Nombre>\n        <a:Ciudad>Vancouver</a:Ciudad>\n        <a:CapacidadTotal>54500</a:CapacidadTotal>\n        <a:PaisCodigo>CAN</a:PaisCodigo>\n      </estadio>\n    </ActualizarEstadio>\n  </soap:Body>\n</soap:Envelope>"
+                },
+                "url": {
+                  "raw": "http://localhost:5003/EstadioService.svc",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "5003",
+                  "path": [
+                    "EstadioService.svc"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Eliminar Estadio (EST-004)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "text/xml; charset=utf-8"
+                  },
+                  {
+                    "key": "SOAPAction",
+                    "value": "http://tempuri.org/IEstadioService/EliminarEstadio"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <EliminarEstadio xmlns=\"http://tempuri.org/\">\n      <codigo>EST-004</codigo>\n    </EliminarEstadio>\n  </soap:Body>\n</soap:Envelope>"
+                },
+                "url": {
+                  "raw": "http://localhost:5003/EstadioService.svc",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "5003",
+                  "path": [
+                    "EstadioService.svc"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Localidades - RF-17",
+          "item": [
+            {
+              "name": "Listar Localidades",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "text/xml; charset=utf-8"
+                  },
+                  {
+                    "key": "SOAPAction",
+                    "value": "http://tempuri.org/ILocalidadService/ListarLocalidades"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <ListarLocalidades xmlns=\"http://tempuri.org/\"/>\n  </soap:Body>\n</soap:Envelope>"
+                },
+                "url": {
+                  "raw": "http://localhost:5003/LocalidadService.svc",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "5003",
+                  "path": [
+                    "LocalidadService.svc"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Obtener Localidad (LOC-A1)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "text/xml; charset=utf-8"
+                  },
+                  {
+                    "key": "SOAPAction",
+                    "value": "http://tempuri.org/ILocalidadService/ObtenerLocalidad"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <ObtenerLocalidad xmlns=\"http://tempuri.org/\">\n      <codigo>LOC-A1</codigo>\n    </ObtenerLocalidad>\n  </soap:Body>\n</soap:Envelope>"
+                },
+                "url": {
+                  "raw": "http://localhost:5003/LocalidadService.svc",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "5003",
+                  "path": [
+                    "LocalidadService.svc"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Crear Localidad (LOC-TEST)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "text/xml; charset=utf-8"
+                  },
+                  {
+                    "key": "SOAPAction",
+                    "value": "http://tempuri.org/ILocalidadService/CrearLocalidad"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <CrearLocalidad xmlns=\"http://tempuri.org/\">\n      <localidad xmlns:a=\"http://schemas.datacontract.org/2004/07/ec.edu.monster.TicketPremium.Contracts\" xmlns:i=\"http://www.w3.org/2001/XMLSchema-instance\">\n        <a:Codigo>LOC-TEST</a:Codigo>\n        <a:Descripcion>VIP PREMIUM</a:Descripcion>\n        <a:Capacidad>25</a:Capacidad>\n        <a:PrecioBase>800</a:PrecioBase>\n        <a:EstadioCodigo>EST-001</a:EstadioCodigo>\n      </localidad>\n    </CrearLocalidad>\n  </soap:Body>\n</soap:Envelope>"
+                },
+                "url": {
+                  "raw": "http://localhost:5003/LocalidadService.svc",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "5003",
+                  "path": [
+                    "LocalidadService.svc"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Actualizar Localidad (LOC-TEST)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "text/xml; charset=utf-8"
+                  },
+                  {
+                    "key": "SOAPAction",
+                    "value": "http://tempuri.org/ILocalidadService/ActualizarLocalidad"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <ActualizarLocalidad xmlns=\"http://tempuri.org/\">\n      <localidad xmlns:a=\"http://schemas.datacontract.org/2004/07/ec.edu.monster.TicketPremium.Contracts\" xmlns:i=\"http://www.w3.org/2001/XMLSchema-instance\">\n        <a:Codigo>LOC-TEST</a:Codigo>\n        <a:Descripcion>ULTRA VIP PREMIUM</a:Descripcion>\n        <a:Capacidad>30</a:Capacidad>\n        <a:PrecioBase>1000</a:PrecioBase>\n        <a:EstadioCodigo>EST-001</a:EstadioCodigo>\n      </localidad>\n    </ActualizarLocalidad>\n  </soap:Body>\n</soap:Envelope>"
+                },
+                "url": {
+                  "raw": "http://localhost:5003/LocalidadService.svc",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "5003",
+                  "path": [
+                    "LocalidadService.svc"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Eliminar Localidad (LOC-TEST)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "text/xml; charset=utf-8"
+                  },
+                  {
+                    "key": "SOAPAction",
+                    "value": "http://tempuri.org/ILocalidadService/EliminarLocalidad"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <EliminarLocalidad xmlns=\"http://tempuri.org/\">\n      <codigo>LOC-TEST</codigo>\n    </EliminarLocalidad>\n  </soap:Body>\n</soap:Envelope>"
+                },
+                "url": {
+                  "raw": "http://localhost:5003/LocalidadService.svc",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "5003",
+                  "path": [
+                    "LocalidadService.svc"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Partidos - RF-18",
+          "item": [
+            {
+              "name": "Listar Partidos",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "text/xml; charset=utf-8"
+                  },
+                  {
+                    "key": "SOAPAction",
+                    "value": "http://tempuri.org/IPartidoService/ListarPartidos"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <ListarPartidos xmlns=\"http://tempuri.org/\"/>\n  </soap:Body>\n</soap:Envelope>"
+                },
+                "url": {
+                  "raw": "http://localhost:5003/PartidoService.svc",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "5003",
+                  "path": [
+                    "PartidoService.svc"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Obtener Partido (PAR-001)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "text/xml; charset=utf-8"
+                  },
+                  {
+                    "key": "SOAPAction",
+                    "value": "http://tempuri.org/IPartidoService/ObtenerPartido"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <ObtenerPartido xmlns=\"http://tempuri.org/\">\n      <codigo>PAR-001</codigo>\n    </ObtenerPartido>\n  </soap:Body>\n</soap:Envelope>"
+                },
+                "url": {
+                  "raw": "http://localhost:5003/PartidoService.svc",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "5003",
+                  "path": [
+                    "PartidoService.svc"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Crear Partido (PAR-TEST)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "text/xml; charset=utf-8"
+                  },
+                  {
+                    "key": "SOAPAction",
+                    "value": "http://tempuri.org/IPartidoService/CrearPartido"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <CrearPartido xmlns=\"http://tempuri.org/\">\n      <partido xmlns:a=\"http://schemas.datacontract.org/2004/07/ec.edu.monster.TicketPremium.Contracts\" xmlns:i=\"http://www.w3.org/2001/XMLSchema-instance\">\n        <a:Codigo>PAR-TEST</a:Codigo>\n        <a:EquipoLocal>Ecuador</a:EquipoLocal>\n        <a:EquipoVisitante>Chile</a:EquipoVisitante>\n        <a:FechaHora>2026-07-10T20:00:00</a:FechaHora>\n        <a:EstadioCodigo>EST-001</a:EstadioCodigo>\n      </partido>\n    </CrearPartido>\n  </soap:Body>\n</soap:Envelope>"
+                },
+                "url": {
+                  "raw": "http://localhost:5003/PartidoService.svc",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "5003",
+                  "path": [
+                    "PartidoService.svc"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Actualizar Partido (PAR-TEST)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "text/xml; charset=utf-8"
+                  },
+                  {
+                    "key": "SOAPAction",
+                    "value": "http://tempuri.org/IPartidoService/ActualizarPartido"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <ActualizarPartido xmlns=\"http://tempuri.org/\">\n      <partido xmlns:a=\"http://schemas.datacontract.org/2004/07/ec.edu.monster.TicketPremium.Contracts\" xmlns:i=\"http://www.w3.org/2001/XMLSchema-instance\">\n        <a:Codigo>PAR-TEST</a:Codigo>\n        <a:EquipoLocal>Ecuador</a:EquipoLocal>\n        <a:EquipoVisitante>Perú</a:EquipoVisitante>\n        <a:FechaHora>2026-07-15T18:00:00</a:FechaHora>\n        <a:EstadioCodigo>EST-001</a:EstadioCodigo>\n      </partido>\n    </ActualizarPartido>\n  </soap:Body>\n</soap:Envelope>"
+                },
+                "url": {
+                  "raw": "http://localhost:5003/PartidoService.svc",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "5003",
+                  "path": [
+                    "PartidoService.svc"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Eliminar Partido (PAR-TEST)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "text/xml; charset=utf-8"
+                  },
+                  {
+                    "key": "SOAPAction",
+                    "value": "http://tempuri.org/IPartidoService/EliminarPartido"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <EliminarPartido xmlns=\"http://tempuri.org/\">\n      <codigo>PAR-TEST</codigo>\n    </EliminarPartido>\n  </soap:Body>\n</soap:Envelope>"
+                },
+                "url": {
+                  "raw": "http://localhost:5003/PartidoService.svc",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "5003",
+                  "path": [
+                    "PartidoService.svc"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Clientes - RF-19",
+          "item": [
+            {
+              "name": "Listar Clientes",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "text/xml; charset=utf-8"
+                  },
+                  {
+                    "key": "SOAPAction",
+                    "value": "http://tempuri.org/IClienteService/ListarClientes"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <ListarClientes xmlns=\"http://tempuri.org/\"/>\n  </soap:Body>\n</soap:Envelope>"
+                },
+                "url": {
+                  "raw": "http://localhost:5003/ClienteService.svc",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "5003",
+                  "path": [
+                    "ClienteService.svc"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Obtener Cliente (1712345678)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "text/xml; charset=utf-8"
+                  },
+                  {
+                    "key": "SOAPAction",
+                    "value": "http://tempuri.org/IClienteService/ObtenerCliente"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <ObtenerCliente xmlns=\"http://tempuri.org/\">\n      <cedula>1712345678</cedula>\n    </ObtenerCliente>\n  </soap:Body>\n</soap:Envelope>"
+                },
+                "url": {
+                  "raw": "http://localhost:5003/ClienteService.svc",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "5003",
+                  "path": [
+                    "ClienteService.svc"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Crear Cliente (1700000000)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "text/xml; charset=utf-8"
+                  },
+                  {
+                    "key": "SOAPAction",
+                    "value": "http://tempuri.org/IClienteService/CrearCliente"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <CrearCliente xmlns=\"http://tempuri.org/\">\n      <cliente xmlns:a=\"http://schemas.datacontract.org/2004/07/ec.edu.monster.TicketPremium.Contracts\" xmlns:i=\"http://www.w3.org/2001/XMLSchema-instance\">\n        <a:Cedula>1700000000</a:Cedula>\n        <a:Nombre>Luis</a:Nombre>\n        <a:Apellido>Torres</a:Apellido>\n        <a:FechaNacimiento>1992-08-12T00:00:00</a:FechaNacimiento>\n        <a:Genero>MASCULINO</a:Genero>\n        <a:Telefono>0999999999</a:Telefono>\n        <a:Email>luis.torres@email.com</a:Email>\n      </cliente>\n    </CrearCliente>\n  </soap:Body>\n</soap:Envelope>"
+                },
+                "url": {
+                  "raw": "http://localhost:5003/ClienteService.svc",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "5003",
+                  "path": [
+                    "ClienteService.svc"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Actualizar Cliente (1700000000)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "text/xml; charset=utf-8"
+                  },
+                  {
+                    "key": "SOAPAction",
+                    "value": "http://tempuri.org/IClienteService/ActualizarCliente"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <ActualizarCliente xmlns=\"http://tempuri.org/\">\n      <cliente xmlns:a=\"http://schemas.datacontract.org/2004/07/ec.edu.monster.TicketPremium.Contracts\" xmlns:i=\"http://www.w3.org/2001/XMLSchema-instance\">\n        <a:Cedula>1700000000</a:Cedula>\n        <a:Nombre>Luis Alberto</a:Nombre>\n        <a:Apellido>Torres</a:Apellido>\n        <a:FechaNacimiento>1992-08-12T00:00:00</a:FechaNacimiento>\n        <a:Genero>MASCULINO</a:Genero>\n        <a:Telefono>0988888888</a:Telefono>\n        <a:Email>luis.torres@email.com</a:Email>\n      </cliente>\n    </ActualizarCliente>\n  </soap:Body>\n</soap:Envelope>"
+                },
+                "url": {
+                  "raw": "http://localhost:5003/ClienteService.svc",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "5003",
+                  "path": [
+                    "ClienteService.svc"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Eliminar Cliente (1700000000)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "text/xml; charset=utf-8"
+                  },
+                  {
+                    "key": "SOAPAction",
+                    "value": "http://tempuri.org/IClienteService/EliminarCliente"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <EliminarCliente xmlns=\"http://tempuri.org/\">\n      <cedula>1700000000</cedula>\n    </EliminarCliente>\n  </soap:Body>\n</soap:Envelope>"
+                },
+                "url": {
+                  "raw": "http://localhost:5003/ClienteService.svc",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "5003",
+                  "path": [
+                    "ClienteService.svc"
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. TicketPremium - Facturación y Reportes (5003)",
+      "item": [
+        {
+          "name": "RF-12: Calcular Factura (Efectivo - 12% descuento)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": "http://tempuri.org/IFacturaService/CalcularFactura"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <CalcularFactura xmlns=\"http://tempuri.org/\">\n      <codigosAsiento xmlns:a=\"http://schemas.microsoft.com/2003/10/Serialization/Arrays\">\n        <a:string>AS-L003-01</a:string>\n        <a:string>AS-L003-02</a:string>\n      </codigosAsiento>\n      <esEfectivo>true</esEfectivo>\n      <clienteCedula>1712345678</clienteCedula>\n    </CalcularFactura>\n  </soap:Body>\n</soap:Envelope>"
+            },
+            "url": {
+              "raw": "http://localhost:5003/FacturaService.svc",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5003",
+              "path": [
+                "FacturaService.svc"
+              ]
+            }
+          }
+        },
+        {
+          "name": "RF-12: Calcular Factura (Crédito - sin descuento)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": "http://tempuri.org/IFacturaService/CalcularFactura"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <CalcularFactura xmlns=\"http://tempuri.org/\">\n      <codigosAsiento xmlns:a=\"http://schemas.microsoft.com/2003/10/Serialization/Arrays\">\n        <a:string>AS-L003-03</a:string>\n        <a:string>AS-L003-04</a:string>\n        <a:string>AS-L003-05</a:string>\n      </codigosAsiento>\n      <esEfectivo>false</esEfectivo>\n      <clienteCedula>1712345678</clienteCedula>\n    </CalcularFactura>\n  </soap:Body>\n</soap:Envelope>"
+            },
+            "url": {
+              "raw": "http://localhost:5003/FacturaService.svc",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5003",
+              "path": [
+                "FacturaService.svc"
+              ]
+            }
+          }
+        },
+        {
+          "name": "RF-13: Resumen Ventas por Partido (PAR-001)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": "http://tempuri.org/IReporteService/ResumenVentasPorPartido"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <ResumenVentasPorPartido xmlns=\"http://tempuri.org/\">\n      <codigoPartido>PAR-001</codigoPartido>\n    </ResumenVentasPorPartido>\n  </soap:Body>\n</soap:Envelope>"
+            },
+            "url": {
+              "raw": "http://localhost:5003/ReporteService.svc",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5003",
+              "path": [
+                "ReporteService.svc"
+              ]
+            }
+          }
+        },
+        {
+          "name": "RF-14: Resumen Ventas por Cliente (1712345678)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": "http://tempuri.org/IReporteService/ResumenVentasPorCliente"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <ResumenVentasPorCliente xmlns=\"http://tempuri.org/\">\n      <cedulaCliente>1712345678</cedulaCliente>\n    </ResumenVentasPorCliente>\n  </soap:Body>\n</soap:Envelope>"
+            },
+            "url": {
+              "raw": "http://localhost:5003/ReporteService.svc",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5003",
+              "path": [
+                "ReporteService.svc"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Saga Orquestada - Compras (5003)",
+      "description": "Ejecutar estos tests EN ORDEN. Si un test falla, ejecutar ExpirarReservasVencidas primero o re-crear la BD.",
+      "item": [
+        {
+          "name": "RF-10: Comprar en Efectivo - Flujo Feliz ✅",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Compra exitosa', () => pm.response.text().includes('Exitoso') && pm.response.text().includes('true'));",
+                  "pm.test('Contiene numero factura', () => pm.response.text().includes('FAC-'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": "http://tempuri.org/ICompraService/ComprarEnEfectivo"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <ComprarEnEfectivo xmlns=\"http://tempuri.org/\">\n      <codigosAsiento xmlns:a=\"http://schemas.microsoft.com/2003/10/Serialization/Arrays\">\n        <a:string>AS-L001-01</a:string>\n        <a:string>AS-L001-02</a:string>\n      </codigosAsiento>\n      <clienteCedula>1712345678</clienteCedula>\n    </ComprarEnEfectivo>\n  </soap:Body>\n</soap:Envelope>"
+            },
+            "url": {
+              "raw": "http://localhost:5003/CompraService.svc",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5003",
+              "path": [
+                "CompraService.svc"
+              ]
+            }
+          }
+        },
+        {
+          "name": "RF-10: Comprar en Efectivo - Fallo (mismo asiento) ❌",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 500 por fallo', () => pm.response.to.have.status(500));",
+                  "pm.test('Contiene ASIENTO_NO_DISPONIBLE', () => pm.response.text().includes('ASIENTO_NO_DISPONIBLE'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": "http://tempuri.org/ICompraService/ComprarEnEfectivo"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <ComprarEnEfectivo xmlns=\"http://tempuri.org/\">\n      <codigosAsiento xmlns:a=\"http://schemas.microsoft.com/2003/10/Serialization/Arrays\">\n        <a:string>AS-L001-01</a:string>\n        <a:string>AS-L001-03</a:string>\n      </codigosAsiento>\n      <clienteCedula>1712345678</clienteCedula>\n    </ComprarEnEfectivo>\n  </soap:Body>\n</soap:Envelope>"
+            },
+            "url": {
+              "raw": "http://localhost:5003/CompraService.svc",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5003",
+              "path": [
+                "CompraService.svc"
+              ]
+            }
+          }
+        },
+        {
+          "name": "RF-11: Comprar a Crédito - Flujo Feliz ✅ (Juan, 12 meses)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Compra exitosa', () => pm.response.text().includes('true'));",
+                  "pm.test('Contiene Crédito #', () => pm.response.text().includes('Crédito'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": "http://tempuri.org/ICompraService/ComprarACredito"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <ComprarACredito xmlns=\"http://tempuri.org/\">\n      <codigosAsiento xmlns:a=\"http://schemas.microsoft.com/2003/10/Serialization/Arrays\">\n        <a:string>AS-L002-01</a:string>\n        <a:string>AS-L002-02</a:string>\n      </codigosAsiento>\n      <clienteCedula>1712345678</clienteCedula>\n      <plazoMeses>12</plazoMeses>\n    </ComprarACredito>\n  </soap:Body>\n</soap:Envelope>"
+            },
+            "url": {
+              "raw": "http://localhost:5003/CompraService.svc",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5003",
+              "path": [
+                "CompraService.svc"
+              ]
+            }
+          }
+        },
+        {
+          "name": "RF-11: Comprar a Crédito - Fallo (Pedro, no elegible) ❌",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 500 por fallo', () => pm.response.to.have.status(500));",
+                  "pm.test('Contiene CREDITO_DENEGADO', () => pm.response.text().includes('CREDITO_DENEGADO'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": "http://tempuri.org/ICompraService/ComprarACredito"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <ComprarACredito xmlns=\"http://tempuri.org/\">\n      <codigosAsiento xmlns:a=\"http://schemas.microsoft.com/2003/10/Serialization/Arrays\">\n        <a:string>AS-L002-03</a:string>\n        <a:string>AS-L002-04</a:string>\n      </codigosAsiento>\n      <clienteCedula>1712345680</clienteCedula>\n      <plazoMeses>12</plazoMeses>\n    </ComprarACredito>\n  </soap:Body>\n</soap:Envelope>"
+            },
+            "url": {
+              "raw": "http://localhost:5003/CompraService.svc",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5003",
+              "path": [
+                "CompraService.svc"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
