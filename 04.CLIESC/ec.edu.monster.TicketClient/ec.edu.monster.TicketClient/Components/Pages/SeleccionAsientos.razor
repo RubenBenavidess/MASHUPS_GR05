@@ -1,0 +1,81 @@
+﻿@page "/seleccion-asientos/{CodigoPartido}"
+@using ec.edu.monster.TicketClient.Modelos
+@using ec.edu.monster.TicketClient.Servicios
+@inject TicketingService TicketCtrl
+@inject NavigationManager NavManager
+@implements IDisposable
+
+<h3 class="mb-4">Selección de Asientos para el Partido: @CodigoPartido</h3>
+
+<div class="contenedor-estadio d-flex gap-4">
+
+    <div class="mapa flex-grow-1 p-3 border rounded shadow-sm bg-white">
+        <h4 class="mb-3">Elige tu localidad</h4>
+        <div class="grilla-asientos d-flex flex-wrap gap-2">
+            @foreach (var seat in TicketCtrl.StadiumSeats)
+            {
+                <div class="asiento @seat.Status.ToLower() p-2 border rounded text-center"
+                     style="cursor: pointer; min-width: 80px;"
+                     @onclick="() => SeleccionarAsiento(seat.Id)">
+                    💺<br />@seat.Id
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="carrito p-3 border rounded shadow-sm bg-light" style="min-width: 300px; height: fit-content;">
+        <h4>Tus Entradas</h4>
+        @if (TicketCtrl.Cart.Count == 0)
+        {
+            <div class="alert alert-info mt-3">No has seleccionado asientos.</div>
+        }
+        else
+        {
+            <ul class="list-group mt-3 mb-3">
+                @foreach (var item in TicketCtrl.Cart)
+                {
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        @item.Id
+                        <span class="badge bg-primary rounded-pill">$@item.Price</span>
+                    </li>
+                }
+            </ul>
+            <hr />
+            <h5 class="text-end">Total: $@TicketCtrl.GetTotal()</h5>
+
+            <button class="btn btn-success w-100 mt-3" @onclick="IrAFacturacion">
+                Ir a Pagar
+            </button>
+        }
+    </div>
+
+</div>
+
+@code {
+    // ⚠️ Nota: Tu URL recibe un STRING (ej. "PAR-001"), no un INT.
+    [Parameter]
+    public string CodigoPartido { get; set; }
+
+    protected override void OnInitialized()
+    {
+        TicketCtrl.OnStateChanged += StateHasChanged;
+
+        // Cargamos los asientos pasando el código del partido
+        TicketCtrl.CargarAsientosPorPartido(CodigoPartido);
+    }
+
+    private void SeleccionarAsiento(string id)
+    {
+        TicketCtrl.ToggleSeat(id);
+    }
+
+    private void IrAFacturacion()
+    {
+        NavManager.NavigateTo("/facturacion");
+    }
+
+    public void Dispose()
+    {
+        TicketCtrl.OnStateChanged -= StateHasChanged;
+    }
+}

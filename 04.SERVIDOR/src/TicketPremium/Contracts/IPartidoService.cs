@@ -39,4 +39,8 @@ public interface IPartidoService
 
     [OperationContract]
     Task EliminarPartido(string codigo);
+
+    // En tu interface IPartidoService
+    //[OperationContract]
+    //Task<List<AsientoDto>> ListarAsientosPorPartido(string codigoPartido);
 }

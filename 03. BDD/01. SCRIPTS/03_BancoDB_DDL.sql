@@ -16,13 +16,15 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Clientes')
 BEGIN
     CREATE TABLE [dbo].[Clientes] (
-        [Cedula]            NVARCHAR(50)    NOT NULL,
+        [Id]                UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(), -- Nueva PK UUID
+        [Cedula]            NVARCHAR(50)    NOT NULL, -- Se mantiene el dato
         [Nombre]            NVARCHAR(200)   NOT NULL,
         [Apellido]          NVARCHAR(200)   NOT NULL,
         [FechaNacimiento]   DATETIME2       NOT NULL,
         [Genero]            NVARCHAR(50)    NOT NULL,
         [Estado]            NVARCHAR(50)    NOT NULL,
-        CONSTRAINT [PK_Clientes] PRIMARY KEY CLUSTERED ([Cedula])
+        CONSTRAINT [PK_Clientes] PRIMARY KEY CLUSTERED ([Id]),
+        CONSTRAINT [UQ_Clientes_Cedula] UNIQUE ([Cedula]) -- Evita cédulas duplicadas
     );
 END
 GO
@@ -34,12 +36,12 @@ IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Cuentas')
 BEGIN
     CREATE TABLE [dbo].[Cuentas] (
         [Numero]            NVARCHAR(50)    NOT NULL,
-        [ClienteCedula]     NVARCHAR(50)    NOT NULL,
+        [ClienteId]         UNIQUEIDENTIFIER NOT NULL, -- Actualizado a UUID
         [Tipo]              NVARCHAR(50)    NOT NULL,
         [Saldo]             DECIMAL(18,2)   NOT NULL,
         CONSTRAINT [PK_Cuentas] PRIMARY KEY CLUSTERED ([Numero]),
-        CONSTRAINT [FK_Cuentas_Clientes_ClienteCedula] FOREIGN KEY ([ClienteCedula])
-            REFERENCES [dbo].[Clientes] ([Cedula])
+        CONSTRAINT [FK_Cuentas_Clientes_ClienteId] FOREIGN KEY ([ClienteId])
+            REFERENCES [dbo].[Clientes] ([Id])
             ON DELETE CASCADE
     );
 END
@@ -71,15 +73,15 @@ IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Creditos')
 BEGIN
     CREATE TABLE [dbo].[Creditos] (
         [Codigo]            INT             IDENTITY(1,1) NOT NULL,
-        [ClienteCedula]     NVARCHAR(50)    NOT NULL,
+        [ClienteId]         UNIQUEIDENTIFIER NOT NULL, -- Actualizado a UUID
         [Monto]             DECIMAL(18,2)   NOT NULL,
         [PlazoMeses]        INT             NOT NULL,
         [TasaAnual]         DECIMAL(18,2)   NOT NULL,
         [FechaAprobacion]   DATETIME2       NOT NULL,
         [Estado]            NVARCHAR(50)    NOT NULL,
         CONSTRAINT [PK_Creditos] PRIMARY KEY CLUSTERED ([Codigo]),
-        CONSTRAINT [FK_Creditos_Clientes_ClienteCedula] FOREIGN KEY ([ClienteCedula])
-            REFERENCES [dbo].[Clientes] ([Cedula])
+        CONSTRAINT [FK_Creditos_Clientes_ClienteId] FOREIGN KEY ([ClienteId])
+            REFERENCES [dbo].[Clientes] ([Id])
             ON DELETE CASCADE
     );
 END
@@ -104,5 +106,5 @@ BEGIN
 END
 GO
 
-PRINT 'DDL BancoDB ejecutado correctamente.';
+PRINT 'DDL BancoDB ejecutado correctamente con UUID en Clientes.';
 GO

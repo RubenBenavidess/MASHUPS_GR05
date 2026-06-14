@@ -1,0 +1,58 @@
+﻿@page "/partidos"
+@using PartidoService
+@inject PartidoServiceClient PartidoClient
+@inject NavigationManager NavManager
+
+<h3>Catálogo de Partidos - Mundial 2026</h3>
+
+@if (listaPartidos == null)
+{
+    <p><em>Cargando partidos disponibles...</em></p>
+}
+else if (!listaPartidos.Any())
+{
+    <p>No hay partidos programados en este momento.</p>
+}
+else
+{
+    <div class="row">
+        @foreach (var partido in listaPartidos)
+        {
+            <div class="col-md-4 mb-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">@partido.EquipoLocal vs @partido.EquipoVisitante</h5>
+                        <h6 class="card-subtitle mb-2 text-muted">@partido.FechaHora.ToString("dd/MMM/yyyy HH:mm")</h6>
+                        <p class="card-text">Sede: @partido.EstadioCodigo</p>
+                        <button class="btn btn-success" @onclick="() => VerLocalidades(partido.Codigo)">
+                            Ver Asientos
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private PartidoDto[] listaPartidos;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Consumimos el Web Service SOAP para listar los partidos
+            listaPartidos = await PartidoClient.ListarPartidosAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al cargar partidos: {ex.Message}");
+        }
+    }
+
+    private void VerLocalidades(string codigoPartido)
+    {
+        // Navegamos a la pantalla de detalle pasando el código del partido en la URL
+        NavManager.NavigateTo($"/seleccion-asientos/{codigoPartido}");
+    }
+}

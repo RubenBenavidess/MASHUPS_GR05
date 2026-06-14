@@ -1,0 +1,79 @@
+﻿@page "/facturacion"
+@using ec.edu.monster.TicketClient.State
+@inject CarritoState Carrito
+@* Suponiendo que generaste el cliente SOAP como CompraServiceClient *@
+
+@using CompraService
+@inject CompraServiceClient OrquestadorClient
+
+<h3>Resumen de Facturación</h3>
+
+@if (Carrito.AsientosSeleccionados.Count == 0)
+{
+    <p>Tu carrito está vacío.</p>
+}
+else
+{
+    <ul>
+        @foreach (var asiento in Carrito.AsientosSeleccionados)
+        {
+            <li>@asiento <button @onclick="() => Carrito.RemoverAsiento(asiento)">Quitar</button></li>
+        }
+    </ul>
+
+    <input @bind="cedulaCliente" placeholder="Ingrese su Cédula" />
+    <select @bind="metodoPago">
+        <option value="EFECTIVO">Efectivo (12% Descuento)</option>
+        <option value="CREDITO">Crédito Directo</option>
+    </select>
+
+    @if (metodoPago == "CREDITO")
+    {
+        <input type="number" @bind="mesesPlazo" placeholder="Meses plazo (3-18)" />
+    }
+
+    <button class="btn btn-primary" @onclick="ProcesarPago">Pagar Todo</button>
+}
+
+@code {
+    private string cedulaCliente = "";
+    private string metodoPago = "EFECTIVO";
+    private int mesesPlazo = 3;
+
+    protected override void OnInitialized()
+    {
+        // Escuchar cambios en el carrito
+        Carrito.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        Carrito.OnChange -= StateHasChanged;
+    }
+
+    private async Task ProcesarPago()
+    {
+        var asientosArray = Carrito.AsientosSeleccionados.ToArray();
+
+        try
+        {
+            if (metodoPago == "EFECTIVO")
+            {
+                // Llama al SOAP de tu Orquestador (TicketPremium)
+                var response = await OrquestadorClient.ComprarEnEfectivoAsync(asientosArray, cedulaCliente);
+                // Mostrar éxito y vaciar carrito
+                Carrito.VaciarCarrito();
+            }
+            else
+            {
+                var response = await OrquestadorClient.ComprarACreditoAsync(asientosArray, cedulaCliente, mesesPlazo);
+                Carrito.VaciarCarrito();
+            }
+        }
+        catch (Exception ex)
+        {
+            // Manejar la FaultException (Ej: CreditoDenegado, MontoExcedido)
+            Console.WriteLine($"Error al pagar: {ex.Message}");
+        }
+    }
+}
