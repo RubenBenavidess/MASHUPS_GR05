@@ -20,17 +20,22 @@
     </p>
 
     <div class="animate-in" style="display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;">
-        <button class="btn btn-primary btn-lg" @onclick="() => NavManager.NavigateTo('/partidos')">
+        <button class="btn btn-primary btn-lg" @onclick="IrAPartidos">
             Ver Más Partidos
         </button>
-        <button class="btn btn-outline btn-lg" @onclick="() => NavManager.NavigateTo('/')">
+        <button class="btn btn-outline btn-lg" @onclick="IrAInicio">
             Ir al Inicio
         </button>
     </div>
 
     <div style="margin-top:3rem;padding:1.5rem;background:var(--color-navy);border-radius:var(--radius-md);border:1px solid rgba(200,169,81,0.12);max-width:400px;width:100%;" class="animate-in">
-        <div style="font-family:var(--font-mono);font-size:0.68rem;color:rgba(245,240,232,0.4);margin-bottom:0.5rem;">SÍGUENOS</div>
+        <div style="font-family:var(--font-mono);font-size:0.68rem;color:rgba(245,240,232,0.4);margin-bottom:0.5rem;">SIGUENOS</div>
         <div style="font-family:var(--font-display);font-size:1.1rem;letter-spacing:0.04em;color:var(--color-chalk);">TicketPremium</div>
         <div style="font-family:var(--font-mono);font-size:0.7rem;color:rgba(245,240,232,0.3);">FIFA World Cup 2026 · Boletos Oficiales</div>
     </div>
 </div>
+
+@code {
+    private void IrAPartidos() => NavManager.NavigateTo("/partidos");
+    private void IrAInicio() => NavManager.NavigateTo("/");
+}

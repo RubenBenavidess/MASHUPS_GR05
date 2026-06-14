@@ -29,7 +29,7 @@
         </div>
     </div>
     <div style="margin-top:2rem;">
-        <button class="btn btn-primary btn-lg" @onclick="() => NavManager.NavigateTo('/partidos')">
+        <button class="btn btn-primary btn-lg" @onclick="IrAPartidos">
             Ver Partidos Disponibles
         </button>
     </div>
@@ -106,3 +106,7 @@
 <div style="text-align:center;margin-top:3rem;padding:2rem;color:rgba(245,240,232,0.3);font-family:var(--font-mono);font-size:0.7rem;">
     FIFA World Cup 2026 &copy; · USA · México · Canadá · TicketPremium Oficial
 </div>
+
+@code {
+    private void IrAPartidos() => NavManager.NavigateTo("/partidos");
+}

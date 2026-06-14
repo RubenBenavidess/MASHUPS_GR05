@@ -37,7 +37,7 @@
         <p style="font-family:var(--font-mono);font-size:0.8rem;color:var(--color-gold);margin-top:0.3rem;">
             Factura: @numeroFactura
         </p>
-        <button class="btn btn-primary btn-lg" style="margin-top:1.5rem;" @onclick="() => NavManager.NavigateTo('/partidos')">
+        <button class="btn btn-primary btn-lg" style="margin-top:1.5rem;" @onclick="IrAPartidos">
             Ver Más Partidos
         </button>
     </div>
@@ -53,7 +53,7 @@ else if (Carrito.AsientosSeleccionados.Count == 0)
         </svg>
         <h3>Tu carrito está vacío</h3>
         <p>Selecciona asientos antes de continuar.</p>
-        <button class="btn btn-outline" style="margin-top:1rem;" @onclick="() => NavManager.NavigateTo('/partidos')">
+        <button class="btn btn-outline" style="margin-top:1rem;" @onclick="IrAPartidos">
             Buscar Partidos
         </button>
     </div>
@@ -76,7 +76,7 @@ else
 
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
                         <div class="@(metodoPago == "EFECTIVO" ? "payment-option selected" : "payment-option")"
-                             @onclick="() => metodoPago = "EFECTIVO"">
+                             @onclick="SeleccionarEfectivo">
                             <svg width="32" height="32" viewBox="0 0 48 48" fill="none" style="margin-bottom:0.5rem;">
                                 <rect x="8" y="10" width="32" height="28" rx="3" stroke="currentColor" stroke-width="2"/>
                                 <ellipse cx="24" cy="24" rx="10" ry="8" stroke="currentColor" stroke-width="1.5"/>
@@ -88,7 +88,7 @@ else
                         </div>
 
                         <div class="@(metodoPago == "CREDITO" ? "payment-option selected" : "payment-option")"
-                             @onclick="() => metodoPago = "CREDITO"">
+                             @onclick="SeleccionarCredito">
                             <svg width="32" height="32" viewBox="0 0 48 48" fill="none" style="margin-bottom:0.5rem;">
                                 <rect x="6" y="10" width="36" height="28" rx="4" stroke="currentColor" stroke-width="2"/>
                                 <rect x="6" y="18" width="36" height="6" fill="currentColor" opacity="0.1"/>
@@ -267,4 +267,9 @@ else
             isProcessing = false;
         }
     }
+
+    private void IrAPartidos() => NavManager.NavigateTo("/partidos");
+
+    private void SeleccionarEfectivo() => metodoPago = "EFECTIVO";
+    private void SeleccionarCredito() => metodoPago = "CREDITO";
 }

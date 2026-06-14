@@ -16,7 +16,7 @@ public class FifaDbContext : DbContext
         if (!optionsBuilder.IsConfigured)
         {
             optionsBuilder.UseSqlServer(
-                "Server=localhost;Database=FifaDB;User Id=sa;Password=admin123#;TrustServerCertificate=true;");
+                "Server=localhost;Database=FifaDB;User Id=sa;Password=TicketPremium2026!;TrustServerCertificate=true;");
         }
     }
 
