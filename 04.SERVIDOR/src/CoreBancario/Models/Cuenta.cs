@@ -10,7 +10,7 @@ namespace ec.edu.monster.CoreBancario.Models
         public string Numero { get; set; } = null!;
 
         [Required]
-        public string ClienteCedula { get; set; } = null!;
+        public Guid ClienteId { get; set; }
 
         [Required]
         public string Tipo { get; set; } = null!;
@@ -18,7 +18,7 @@ namespace ec.edu.monster.CoreBancario.Models
         [Required]
         public decimal Saldo { get; set; }
 
-        [ForeignKey(nameof(ClienteCedula))]
+        [ForeignKey(nameof(ClienteId))]
         public ClienteBanco ClienteBanco { get; set; } = null!;
 
         public ICollection<Movimiento> Movimientos { get; set; } = new List<Movimiento>();

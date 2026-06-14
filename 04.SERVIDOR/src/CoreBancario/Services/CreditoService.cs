@@ -151,7 +151,7 @@ namespace ec.edu.monster.CoreBancario.Services
 
                 var credito = new Credito
                 {
-                    ClienteCedula = cedula,
+                    ClienteId = cliente.Id, 
                     Monto = monto,
                     PlazoMeses = plazoMeses,
                     TasaAnual = 16.5m,

@@ -6,7 +6,7 @@ public class FifaSoapClient
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<FifaSoapClient> _logger;
-    private const string FifaEndpoint = "http://localhost:5001/FifaAsientoService.svc";
+    private const string FifaEndpoint = "http://localhost:9097/FifaAsientoService.svc";
 
     public FifaSoapClient(IHttpClientFactory httpClientFactory, ILogger<FifaSoapClient> logger)
     {

@@ -14,10 +14,11 @@ namespace ec.edu.monster.CoreBancario
         {
             var builder = WebApplication.CreateBuilder(args);
 
+            /*
             builder.WebHost.UseKestrel(options =>
             {
                 options.ListenLocalhost(5002);
-            });
+            });*/
 
             builder.Services.AddServiceModelServices();
             builder.Services.AddServiceModelMetadata();
@@ -30,10 +31,14 @@ namespace ec.edu.monster.CoreBancario
 
             var app = builder.Build();
 
-            app.UseServiceModel(builder =>
+            app.UseServiceModel(serviceBuilder =>
             {
-                builder.AddService<CreditoService>();
-                builder.AddServiceEndpoint<CreditoService, ICreditoService>(
+                var serviceMetadataBehavior = app.Services.GetRequiredService<CoreWCF.Description.ServiceMetadataBehavior>();
+
+                serviceMetadataBehavior.HttpGetEnabled = true;
+
+                serviceBuilder.AddService<CreditoService>();
+                serviceBuilder.AddServiceEndpoint<CreditoService, ICreditoService>(
                     new BasicHttpBinding(),
                     "/CreditoService.svc");
             });

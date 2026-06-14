@@ -14,10 +14,11 @@ public class Program
     {
         var builder = WebApplication.CreateBuilder(args);
 
+        /*
         builder.WebHost.UseKestrel(options =>
         {
             options.ListenLocalhost(5003);
-        });
+        });*/
 
         builder.Services.AddServiceModelServices();
 
@@ -47,6 +48,8 @@ public class Program
 
         builder.Services.AddScoped<IFacturaService>(sp => sp.GetRequiredService<FacturaService>());
 
+        builder.Services.AddServiceModelMetadata();
+
         var app = builder.Build();
 
         using (var scope = app.Services.CreateScope())
@@ -57,6 +60,9 @@ public class Program
 
         app.UseServiceModel(serviceBuilder =>
         {
+            var serviceMetadataBehavior = app.Services.GetRequiredService<CoreWCF.Description.ServiceMetadataBehavior>();
+            serviceMetadataBehavior.HttpGetEnabled = true;
+
             serviceBuilder.AddService<PaisService>();
             serviceBuilder.AddServiceEndpoint<PaisService, IPaisService>(
                 new BasicHttpBinding(), "/PaisService.svc");

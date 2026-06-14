@@ -10,7 +10,7 @@ namespace ec.edu.monster.CoreBancario.Models
         public int Codigo { get; set; }
 
         [Required]
-        public string ClienteCedula { get; set; } = null!;
+        public Guid ClienteId { get; set; }
 
         [Required]
         public decimal Monto { get; set; }
@@ -27,7 +27,7 @@ namespace ec.edu.monster.CoreBancario.Models
         [Required]
         public string Estado { get; set; } = null!;
 
-        [ForeignKey(nameof(ClienteCedula))]
+        [ForeignKey(nameof(ClienteId))]
         public ClienteBanco ClienteBanco { get; set; } = null!;
 
         public ICollection<Amortizacion> Amortizaciones { get; set; } = new List<Amortizacion>();

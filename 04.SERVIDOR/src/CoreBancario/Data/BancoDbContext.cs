@@ -17,14 +17,20 @@ namespace ec.edu.monster.CoreBancario.Data
         {
             modelBuilder.Entity<ClienteBanco>(entity =>
             {
-                entity.HasKey(e => e.Cedula);
+                // CAMBIO: La llave principal ahora es Id
+                entity.HasKey(e => e.Id);
+
+                // CAMBIO: La Cédula debe ser única aunque no sea la PK
+                entity.HasIndex(e => e.Cedula).IsUnique();
+
                 entity.HasMany(e => e.Cuentas)
                       .WithOne(c => c.ClienteBanco)
-                      .HasForeignKey(c => c.ClienteCedula)
+                      .HasForeignKey(c => c.ClienteId) // CAMBIO: Usamos ClienteId
                       .OnDelete(DeleteBehavior.Cascade);
+
                 entity.HasMany(e => e.Creditos)
                       .WithOne(cr => cr.ClienteBanco)
-                      .HasForeignKey(cr => cr.ClienteCedula)
+                      .HasForeignKey(cr => cr.ClienteId) // CAMBIO: Usamos ClienteId
                       .OnDelete(DeleteBehavior.Cascade);
             });
 
@@ -58,9 +64,17 @@ namespace ec.edu.monster.CoreBancario.Data
 
             var now = new DateTime(2026, 6, 10);
 
+            // CAMBIO: Definimos GUIDs fijos para poder crear las relaciones en el SeedData
+            var guidCliente1 = Guid.Parse("11111111-1111-1111-1111-111111111111");
+            var guidCliente2 = Guid.Parse("22222222-2222-2222-2222-222222222222");
+            var guidCliente3 = Guid.Parse("33333333-3333-3333-3333-333333333333");
+            var guidCliente4 = Guid.Parse("44444444-4444-4444-4444-444444444444");
+            var guidCliente5 = Guid.Parse("55555555-5555-5555-5555-555555555555");
+
             // Cliente 1: Juan Perez - MASCULINO, 45, ACTIVO (ELIGIBLE)
             var c1 = new ClienteBanco
             {
+                Id = guidCliente1, // Asignamos el ID
                 Cedula = "1712345678",
                 Nombre = "Juan",
                 Apellido = "Perez",
@@ -72,6 +86,7 @@ namespace ec.edu.monster.CoreBancario.Data
             // Cliente 2: Maria Gomez - FEMENINO, 30, ACTIVO (ELIGIBLE)
             var c2 = new ClienteBanco
             {
+                Id = guidCliente2, // Asignamos el ID
                 Cedula = "1712345679",
                 Nombre = "Maria",
                 Apellido = "Gomez",
@@ -83,6 +98,7 @@ namespace ec.edu.monster.CoreBancario.Data
             // Cliente 3: Pedro Ramirez - MASCULINO, 22, ACTIVO (NOT ELIGIBLE - male under 25)
             var c3 = new ClienteBanco
             {
+                Id = guidCliente3, // Asignamos el ID
                 Cedula = "1712345680",
                 Nombre = "Pedro",
                 Apellido = "Ramirez",
@@ -94,6 +110,7 @@ namespace ec.edu.monster.CoreBancario.Data
             // Cliente 4: Ana Lopez - FEMENINO, 28, INACTIVO (NOT ELIGIBLE - inactive)
             var c4 = new ClienteBanco
             {
+                Id = guidCliente4, // Asignamos el ID
                 Cedula = "1712345681",
                 Nombre = "Ana",
                 Apellido = "Lopez",
@@ -105,6 +122,7 @@ namespace ec.edu.monster.CoreBancario.Data
             // Cliente 5: Carlos Ruiz - MASCULINO, 35, ACTIVO, has active credit (NOT ELIGIBLE)
             var c5 = new ClienteBanco
             {
+                Id = guidCliente5, // Asignamos el ID
                 Cedula = "1712345682",
                 Nombre = "Carlos",
                 Apellido = "Ruiz",
@@ -115,41 +133,36 @@ namespace ec.edu.monster.CoreBancario.Data
 
             modelBuilder.Entity<ClienteBanco>().HasData(c1, c2, c3, c4, c5);
 
-            // Cuentas
-            var cuenta1 = new Cuenta { Numero = "1001-001", ClienteCedula = "1712345678", Tipo = "AHORROS", Saldo = 2800m };
-            var cuenta2 = new Cuenta { Numero = "1002-001", ClienteCedula = "1712345679", Tipo = "CORRIENTE", Saldo = 4500m };
-            var cuenta3 = new Cuenta { Numero = "1003-001", ClienteCedula = "1712345680", Tipo = "AHORROS", Saldo = 600m };
-            var cuenta4 = new Cuenta { Numero = "1004-001", ClienteCedula = "1712345681", Tipo = "AHORROS", Saldo = 1200m };
-            var cuenta5 = new Cuenta { Numero = "1005-001", ClienteCedula = "1712345682", Tipo = "CORRIENTE", Saldo = 3500m };
+            // Cuentas (CAMBIO: Ahora usan los GUIDs fijos en ClienteId)
+            var cuenta1 = new Cuenta { Numero = "1001-001", ClienteId = guidCliente1, Tipo = "AHORROS", Saldo = 2800m };
+            var cuenta2 = new Cuenta { Numero = "1002-001", ClienteId = guidCliente2, Tipo = "CORRIENTE", Saldo = 4500m };
+            var cuenta3 = new Cuenta { Numero = "1003-001", ClienteId = guidCliente3, Tipo = "AHORROS", Saldo = 600m };
+            var cuenta4 = new Cuenta { Numero = "1004-001", ClienteId = guidCliente4, Tipo = "AHORROS", Saldo = 1200m };
+            var cuenta5 = new Cuenta { Numero = "1005-001", ClienteId = guidCliente5, Tipo = "CORRIENTE", Saldo = 3500m };
 
             modelBuilder.Entity<Cuenta>().HasData(cuenta1, cuenta2, cuenta3, cuenta4, cuenta5);
 
-            // Movimientos Juan - last 30 days and older than 3 months
+            // Movimientos Juan - last 30 days and older than 3 months (No cambian porque apuntan al número de cuenta)
             var movs = new List<Movimiento>
             {
-                // Juan (eligible) - cuenta 1001-001
                 new Movimiento { Codigo = 1, CuentaNumero = "1001-001", Tipo = "DEPOSITO", Monto = 1000m, Fecha = now.AddDays(-5) },
                 new Movimiento { Codigo = 2, CuentaNumero = "1001-001", Tipo = "DEPOSITO", Monto = 2000m, Fecha = now.AddDays(-50) },
                 new Movimiento { Codigo = 3, CuentaNumero = "1001-001", Tipo = "DEPOSITO", Monto = 1500m, Fecha = now.AddDays(-120) },
                 new Movimiento { Codigo = 4, CuentaNumero = "1001-001", Tipo = "RETIRO", Monto = 500m, Fecha = now.AddDays(-10) },
                 new Movimiento { Codigo = 5, CuentaNumero = "1001-001", Tipo = "RETIRO", Monto = 300m, Fecha = now.AddDays(-95) },
 
-                // Maria (eligible) - cuenta 1002-001
                 new Movimiento { Codigo = 6, CuentaNumero = "1002-001", Tipo = "DEPOSITO", Monto = 1200m, Fecha = now.AddDays(-3) },
                 new Movimiento { Codigo = 7, CuentaNumero = "1002-001", Tipo = "DEPOSITO", Monto = 2500m, Fecha = now.AddDays(-45) },
                 new Movimiento { Codigo = 8, CuentaNumero = "1002-001", Tipo = "DEPOSITO", Monto = 1800m, Fecha = now.AddDays(-150) },
                 new Movimiento { Codigo = 9, CuentaNumero = "1002-001", Tipo = "RETIRO", Monto = 400m, Fecha = now.AddDays(-8) },
                 new Movimiento { Codigo = 10, CuentaNumero = "1002-001", Tipo = "RETIRO", Monto = 600m, Fecha = now.AddDays(-60) },
 
-                // Pedro (NOT eligible - under 25) - cuenta 1003-001
                 new Movimiento { Codigo = 11, CuentaNumero = "1003-001", Tipo = "DEPOSITO", Monto = 800m, Fecha = now.AddDays(-7) },
                 new Movimiento { Codigo = 12, CuentaNumero = "1003-001", Tipo = "RETIRO", Monto = 200m, Fecha = now.AddDays(-20) },
 
-                // Ana (NOT eligible - inactive) - cuenta 1004-001
                 new Movimiento { Codigo = 13, CuentaNumero = "1004-001", Tipo = "DEPOSITO", Monto = 600m, Fecha = now.AddDays(-15) },
                 new Movimiento { Codigo = 14, CuentaNumero = "1004-001", Tipo = "RETIRO", Monto = 300m, Fecha = now.AddDays(-40) },
 
-                // Carlos (NOT eligible - active credit) - cuenta 1005-001
                 new Movimiento { Codigo = 15, CuentaNumero = "1005-001", Tipo = "DEPOSITO", Monto = 1500m, Fecha = now.AddDays(-2) },
                 new Movimiento { Codigo = 16, CuentaNumero = "1005-001", Tipo = "DEPOSITO", Monto = 3000m, Fecha = now.AddDays(-55) },
                 new Movimiento { Codigo = 17, CuentaNumero = "1005-001", Tipo = "RETIRO", Monto = 700m, Fecha = now.AddDays(-12) },
@@ -157,11 +170,11 @@ namespace ec.edu.monster.CoreBancario.Data
 
             modelBuilder.Entity<Movimiento>().HasData(movs.ToArray());
 
-            // Carlos has active credit
+            // Carlos has active credit (CAMBIO: Ahora usa ClienteId con el Guid)
             modelBuilder.Entity<Credito>().HasData(new Credito
             {
                 Codigo = 1,
-                ClienteCedula = "1712345682",
+                ClienteId = guidCliente5, // Asignamos el ID
                 Monto = 10000m,
                 PlazoMeses = 12,
                 TasaAnual = 16.5m,

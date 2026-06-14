@@ -4,6 +4,8 @@ using ec.edu.monster.AppFIFA.Services;
 using CoreWCF;
 using CoreWCF.Configuration;
 using Microsoft.EntityFrameworkCore;
+// Necesitarás este using para el comportamiento de la metadata:
+using CoreWCF.Description;
 
 namespace ec.edu.monster.AppFIFA;
 
@@ -16,6 +18,9 @@ public class Program
         builder.WebHost.UseUrls("http://localhost:5001");
 
         builder.Services.AddServiceModelServices();
+
+        // Agregamos el servicio de metadata
+        builder.Services.AddServiceModelMetadata();
 
         builder.Services.AddDbContext<FifaDbContext>(options =>
             options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -33,10 +38,15 @@ public class Program
 
         app.UseServiceModel(serviceBuilder =>
         {
+            var serviceMetadataBehavior = app.Services.GetRequiredService<CoreWCF.Description.ServiceMetadataBehavior>();
+
+            serviceMetadataBehavior.HttpGetEnabled = true;
+
             serviceBuilder.AddService<PartidoService>();
             serviceBuilder.AddServiceEndpoint<PartidoService, IFifaPartidoService>(
                 new BasicHttpBinding(), "/FifaPartidoService.svc");
 
+            // Configuración AsientoService (Ya no necesitamos ConfigureServiceHostBase)
             serviceBuilder.AddService<AsientoService>();
             serviceBuilder.AddServiceEndpoint<AsientoService, IFifaAsientoService>(
                 new BasicHttpBinding(), "/FifaAsientoService.svc");

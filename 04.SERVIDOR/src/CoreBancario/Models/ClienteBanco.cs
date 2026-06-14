@@ -7,6 +7,10 @@ namespace ec.edu.monster.CoreBancario.Models
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.None)]
+
+        public Guid Id { get; set; }
+
+        [Required]
         public string Cedula { get; set; } = null!;
 
         [Required]

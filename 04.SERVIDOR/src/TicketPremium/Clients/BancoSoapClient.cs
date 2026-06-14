@@ -6,7 +6,7 @@ public class BancoSoapClient
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<BancoSoapClient> _logger;
-    private const string BancoEndpoint = "http://localhost:5002/CreditoService.svc";
+    private const string BancoEndpoint = "http://localhost:9098/CreditoService.svc";
 
     public BancoSoapClient(IHttpClientFactory httpClientFactory, ILogger<BancoSoapClient> logger)
     {
