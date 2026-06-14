@@ -1,5 +1,108 @@
 ﻿@page "/"
+@inject NavigationManager NavManager
 
-<h1>Hello, world!</h1>
+<div class="home-hero animate-in">
+    <h1>
+        Mundial de Fútbol
+        <span style="display:block;font-size:2rem;color:var(--color-gold);margin-top:0.2rem;">2026</span>
+    </h1>
+    <p class="subtitle">
+        Vive la emoción del torneo más grande del planeta.
+        Reserva tus boletos en los estadios más icónicos de Norteamérica.
+    </p>
+    <div class="stats-row">
+        <div class="stat-item">
+            <span class="stat-number">3</span>
+            <span class="stat-label">Países Sede</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-number">48</span>
+            <span class="stat-label">Selecciones</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-number">104</span>
+            <span class="stat-label">Partidos</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-number">16</span>
+            <span class="stat-label">Estadios</span>
+        </div>
+    </div>
+    <div style="margin-top:2rem;">
+        <button class="btn btn-primary btn-lg" @onclick="() => NavManager.NavigateTo('/partidos')">
+            Ver Partidos Disponibles
+        </button>
+    </div>
+</div>
 
-Welcome to your new app.
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.5rem;">
+    <div class="card animate-in">
+        <div class="card-body">
+            <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
+                <svg width="36" height="36" viewBox="0 0 48 48" fill="none">
+                    <rect x="6" y="6" width="36" height="36" rx="6" stroke="#C8A951" stroke-width="2"/>
+                    <path d="M16 12v24M32 12v24M12 16h24M12 32h24" stroke="#C8A951" stroke-width="0.8" opacity="0.5"/>
+                    <circle cx="24" cy="24" r="6" stroke="#C8A951" stroke-width="1.5" fill="none"/>
+                    <circle cx="24" cy="24" r="1.5" fill="#C8A951"/>
+                </svg>
+                <h4 style="margin:0;">Estadio Azteca</h4>
+            </div>
+            <p class="card-subtitle">Ciudad de México</p>
+            <p class="card-text">
+                El Coloso de Santa Úrsula. Capacidad para 87,523 espectadores.
+                Sede del partido inaugural: México vs Estados Unidos.
+            </p>
+            <div style="font-family:var(--font-mono);font-size:0.75rem;color:var(--color-gold);">
+                3 localidades · Desde $100 USD
+            </div>
+        </div>
+    </div>
+
+    <div class="card animate-in">
+        <div class="card-body">
+            <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
+                <svg width="36" height="36" viewBox="0 0 48 48" fill="none">
+                    <rect x="6" y="6" width="36" height="36" rx="6" stroke="#C8A951" stroke-width="2"/>
+                    <path d="M16 12v24M32 12v24M12 16h24M12 32h24" stroke="#C8A951" stroke-width="0.8" opacity="0.5"/>
+                    <circle cx="24" cy="24" r="6" stroke="#C8A951" stroke-width="1.5" fill="none"/>
+                    <circle cx="24" cy="24" r="1.5" fill="#C8A951"/>
+                </svg>
+                <h4 style="margin:0;">MetLife Stadium</h4>
+            </div>
+            <p class="card-subtitle">East Rutherford, NJ</p>
+            <p class="card-text">
+                Sede del Super Bowl XLVIII. 82,500 asientos.
+                Recibe el clásico sudamericano: Argentina vs Brasil.
+            </p>
+            <div style="font-family:var(--font-mono);font-size:0.75rem;color:var(--color-gold);">
+                3 localidades · Desde $100 USD
+            </div>
+        </div>
+    </div>
+
+    <div class="card animate-in">
+        <div class="card-body">
+            <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
+                <svg width="36" height="36" viewBox="0 0 48 48" fill="none">
+                    <rect x="6" y="6" width="36" height="36" rx="6" stroke="#C8A951" stroke-width="2"/>
+                    <path d="M16 12v24M32 12v24M12 16h24M12 32h24" stroke="#C8A951" stroke-width="0.8" opacity="0.5"/>
+                    <circle cx="24" cy="24" r="6" stroke="#C8A951" stroke-width="1.5" fill="none"/>
+                    <circle cx="24" cy="24" r="1.5" fill="#C8A951"/>
+                </svg>
+                <h4 style="margin:0;">SoFi Stadium</h4>
+            </div>
+            <p class="card-subtitle">Los Ángeles, CA</p>
+            <p class="card-text">
+                Tecnología de punta en Inglewood. 70,240 asientos.
+                Escenario del duelo europeo: Francia vs Inglaterra.
+            </p>
+            <div style="font-family:var(--font-mono);font-size:0.75rem;color:var(--color-gold);">
+                3 localidades · Desde $100 USD
+            </div>
+        </div>
+    </div>
+</div>
+
+<div style="text-align:center;margin-top:3rem;padding:2rem;color:rgba(245,240,232,0.3);font-family:var(--font-mono);font-size:0.7rem;">
+    FIFA World Cup 2026 &copy; · USA · México · Canadá · TicketPremium Oficial
+</div>

@@ -1,29 +1,29 @@
-﻿namespace ec.edu.monster.TicketClient.State;
+﻿using ec.edu.monster.TicketClient.Modelos;
+
+namespace ec.edu.monster.TicketClient.State;
 
 public class CarritoState
 {
-    // Lista de códigos de asiento seleccionados (Ej: "AS-L009-02")
-    public List<string> AsientosSeleccionados { get; private set; } = new List<string>();
+    public List<Seat> AsientosSeleccionados { get; private set; } = new();
 
-    // Evento para notificar a la interfaz gráfica que el carrito cambió (para actualizar el ícono de número de items)
+    public int Count => AsientosSeleccionados.Count;
+
     public event Action? OnChange;
 
-    public void AgregarAsiento(string codigoAsiento)
+    public void AgregarAsiento(Seat seat)
     {
-        if (!AsientosSeleccionados.Contains(codigoAsiento))
+        if (!AsientosSeleccionados.Any(s => s.Id == seat.Id))
         {
-            AsientosSeleccionados.Add(codigoAsiento);
+            AsientosSeleccionados.Add(seat);
             NotifyStateChanged();
         }
     }
 
     public void RemoverAsiento(string codigoAsiento)
     {
-        if (AsientosSeleccionados.Contains(codigoAsiento))
-        {
-            AsientosSeleccionados.Remove(codigoAsiento);
+        var removed = AsientosSeleccionados.RemoveAll(s => s.Id == codigoAsiento);
+        if (removed > 0)
             NotifyStateChanged();
-        }
     }
 
     public void VaciarCarrito()
@@ -31,6 +31,10 @@ public class CarritoState
         AsientosSeleccionados.Clear();
         NotifyStateChanged();
     }
+
+    public decimal GetTotal() => AsientosSeleccionados.Sum(s => s.Price);
+
+    public string[] GetCodigosAsientos() => AsientosSeleccionados.Select(s => s.Id).ToArray();
 
     private void NotifyStateChanged() => OnChange?.Invoke();
 }

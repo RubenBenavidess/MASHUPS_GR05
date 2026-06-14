@@ -1,9 +1,9 @@
 ﻿using Microsoft.Extensions.Logging;
-// 1. Agregamos el using para que reconozca la carpeta State
 using ec.edu.monster.TicketClient.State;
 
 using CompraService;
 using PartidoService;
+using LocalidadService;
 using ReporteService;
 
 namespace ec.edu.monster.TicketClient
@@ -27,12 +27,13 @@ namespace ec.edu.monster.TicketClient
             builder.Logging.AddDebug();
 #endif
 
-            // 2. Registramos tu CarritoState como Singleton aquí
             builder.Services.AddSingleton<CarritoState>();
 
             builder.Services.AddScoped<CompraServiceClient>();
             builder.Services.AddScoped<PartidoServiceClient>();
+            builder.Services.AddScoped<LocalidadServiceClient>();
             builder.Services.AddScoped<ReporteServiceClient>();
+
             builder.Services.AddSingleton<ec.edu.monster.TicketClient.Servicios.TicketingService>();
 
             return builder.Build();
