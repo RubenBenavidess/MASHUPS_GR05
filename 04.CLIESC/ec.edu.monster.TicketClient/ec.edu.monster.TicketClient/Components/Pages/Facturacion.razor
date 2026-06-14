@@ -75,7 +75,7 @@ else
                     <h4 style="margin-bottom:1.2rem;margin-top:2rem;">Método de Pago</h4>
 
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
-                        <div class="@(metodoPago == "EFECTIVO" ? "payment-option selected" : "payment-option")"
+                        <div class="@EfectivoCssClass"
                              @onclick="SeleccionarEfectivo">
                             <svg width="32" height="32" viewBox="0 0 48 48" fill="none" style="margin-bottom:0.5rem;">
                                 <rect x="8" y="10" width="32" height="28" rx="3" stroke="currentColor" stroke-width="2"/>
@@ -87,7 +87,7 @@ else
                             <span style="font-family:var(--font-mono);font-size:0.65rem;color:var(--color-turf);margin-top:0.2rem;">12% descuento</span>
                         </div>
 
-                        <div class="@(metodoPago == "CREDITO" ? "payment-option selected" : "payment-option")"
+                        <div class="@CreditoCssClass"
                              @onclick="SeleccionarCredito">
                             <svg width="32" height="32" viewBox="0 0 48 48" fill="none" style="margin-bottom:0.5rem;">
                                 <rect x="6" y="10" width="36" height="28" rx="4" stroke="currentColor" stroke-width="2"/>
@@ -143,18 +143,18 @@ else
                 <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid rgba(200,169,81,0.15);">
                     <div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:0.75rem;color:rgba(245,240,232,0.5);margin-bottom:0.3rem;">
                         <span>Subtotal</span>
-                        <span>$@Carrito.GetTotal().ToString("F0")</span>
+                        <span>$@(Carrito.GetTotal().ToString("F0"))</span>
                     </div>
                     @if (metodoPago == "EFECTIVO")
                     {
                         <div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:0.75rem;color:var(--color-turf);margin-bottom:0.3rem;">
                             <span>Descuento (12%)</span>
-                            <span>-$@(Carrito.GetTotal() * 0.12m).ToString("F0")</span>
+                            <span>-$@((Carrito.GetTotal() * 0.12m).ToString("F0"))</span>
                         </div>
                     }
                     <div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:0.75rem;color:rgba(245,240,232,0.5);margin-bottom:0.3rem;">
                         <span>IVA (15%)</span>
-                        <span>$@(Carrito.GetTotal() * 0.15m).ToString("F0")</span>
+                        <span>$@((Carrito.GetTotal() * 0.15m).ToString("F0"))</span>
                     </div>
                     <hr style="margin:0.5rem 0;" />
                     <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -178,7 +178,7 @@ else
 
 <style>
     .payment-option {
-        border: 2px solid rgba(200,169,81,0.12);
+        border: 2px solid rgba(200,169,81,0.18);
         border-radius: var(--radius-md);
         padding: 1.2rem;
         display: flex;
@@ -187,17 +187,19 @@ else
         text-align: center;
         cursor: pointer;
         transition: all var(--transition-fast);
-        color: rgba(245,240,232,0.4);
+        color: rgba(245,240,232,0.65);
+        background: rgba(10,22,40,0.4);
     }
     .payment-option:hover {
-        border-color: rgba(200,169,81,0.3);
-        color: rgba(245,240,232,0.7);
+        border-color: rgba(200,169,81,0.5);
+        color: rgba(245,240,232,0.9);
+        background: rgba(10,22,40,0.7);
     }
     .payment-option.selected {
         border-color: var(--color-gold);
         background: var(--color-gold-20);
         color: var(--color-gold);
-        box-shadow: 0 0 12px rgba(200,169,81,0.15);
+        box-shadow: 0 0 16px rgba(200,169,81,0.2);
     }
 </style>
 
@@ -272,4 +274,7 @@ else
 
     private void SeleccionarEfectivo() => metodoPago = "EFECTIVO";
     private void SeleccionarCredito() => metodoPago = "CREDITO";
+
+    private string EfectivoCssClass => metodoPago == "EFECTIVO" ? "payment-option selected" : "payment-option";
+    private string CreditoCssClass => metodoPago == "CREDITO" ? "payment-option selected" : "payment-option";
 }

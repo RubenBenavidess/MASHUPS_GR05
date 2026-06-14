@@ -27,39 +27,38 @@
                     <defs>
                         <linearGradient id="pitchGrad" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="0%" stop-color="#2E7D32"/>
-                            <stop offset="50%" stop-color="#1B5E20"/>
-                            <stop offset="100%" stop-color="#1B5E20"/>
+                            <stop offset="40%" stop-color="#1B5E20"/>
+                            <stop offset="100%" stop-color="#144A17"/>
                         </linearGradient>
-
-                        <filter id="glowHover">
+                        <filter id="ringGlow">
                             <feGaussianBlur stdDeviation="3" result="blur"/>
                             <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
                         </filter>
-
-                        <linearGradient id="sectionGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stop-color="rgba(46,125,50,0.25)"/>
-                            <stop offset="100%" stop-color="rgba(46,125,50,0.12)"/>
-                        </linearGradient>
+                        <radialGradient id="bgRadial" cx="50%" cy="40%" r="60%">
+                            <stop offset="0%" stop-color="#142B47"/>
+                            <stop offset="100%" stop-color="#0A1628"/>
+                        </radialGradient>
                     </defs>
 
-                    <rect x="0" y="0" width="800" height="560" fill="none" rx="16"/>
+                    <rect x="0" y="0" width="800" height="560" fill="url(#bgRadial)" rx="16"/>
 
                     <!-- PITCH -->
-                    <rect x="160" y="60" width="480" height="300" rx="4" class="pitch-fill"/>
-                    <line x1="400" y1="60" x2="400" y2="360" class="pitch-line"/>
-                    <circle cx="400" cy="210" r="50" class="pitch-center-circle"/>
-                    <circle cx="400" cy="210" r="3" class="pitch-center-dot"/>
-                    <rect x="160" y="140" width="70" height="140" class="pitch-line"/>
-                    <rect x="570" y="140" width="70" height="140" class="pitch-line"/>
-                    <rect x="160" y="170" width="30" height="80" class="pitch-line"/>
-                    <rect x="610" y="170" width="30" height="80" class="pitch-line"/>
-
-                    <!-- STANDS LABEL -->
-                    <text x="400" y="410" text-anchor="middle" class="section-label" style="font-size:11px;fill:rgba(245,240,232,0.3);">— TRIBUNAS —</text>
+                    <rect x="160" y="55" width="480" height="300" rx="4" fill="url(#pitchGrad)" stroke="rgba(255,255,255,0.28)" stroke-width="2"/>
+                    <line x1="400" y1="55" x2="400" y2="355" stroke="rgba(255,255,255,0.35)" stroke-width="1"/>
+                    <circle cx="400" cy="205" r="50" stroke="rgba(255,255,255,0.35)" stroke-width="1" fill="none"/>
+                    <circle cx="400" cy="205" r="4" fill="rgba(255,255,255,0.5)"/>
+                    <rect x="160" y="135" width="70" height="140" stroke="rgba(255,255,255,0.3)" stroke-width="1" fill="none"/>
+                    <rect x="570" y="135" width="70" height="140" stroke="rgba(255,255,255,0.3)" stroke-width="1" fill="none"/>
+                    <rect x="160" y="165" width="30" height="80" stroke="rgba(255,255,255,0.25)" stroke-width="1" fill="none"/>
+                    <rect x="610" y="165" width="30" height="80" stroke="rgba(255,255,255,0.25)" stroke-width="1" fill="none"/>
 
                     @{
                         var localidades = TicketCtrl.GetLocalidades();
-                        var colors = new[] { "#2E7D32", "#C8A951", "#D32F2F" };
+                        var ringRadii = new[] { (rx: 270, ry: 155), (rx: 310, ry: 185), (rx: 350, ry: 215) };
+                        var ringStrokeW = 34;
+                        var centerX = 400;
+                        var centerY = 210;
+                        var labelX = 630;
                         int idx = 0;
 
                         foreach (var loc in localidades)
@@ -69,47 +68,62 @@
                             var disp = seats.Count(s => s.IsAvailable);
                             var ocup = seats.Count(s => s.IsOccupied || s.IsReserved);
                             var ratio = total > 0 ? (double)disp / total : 0;
-                            var colorClass = ratio > 0.5 ? "high-availability" : ratio > 0.1 ? "mid-availability" : "low-availability";
                             var locInfo = seats.FirstOrDefault();
+                            var (rx, ry) = ringRadii[idx];
+                            var labelY = centerY - ry / 2;
 
-                            var bandYOffset = 400 + idx * 45;
-                            var bandH = 36;
+                            string strokeColor = ratio > 0.5 ? "rgba(46,125,50,0.55)" : ratio > 0.1 ? "rgba(200,169,81,0.5)" : "rgba(211,47,47,0.45)";
+                            string bgColor   = ratio > 0.5 ? "rgba(46,125,50,0.08)" : ratio > 0.1 ? "rgba(200,169,81,0.06)" : "rgba(211,47,47,0.06)";
 
-                            <g style="cursor:pointer;" @onclick="() => TicketCtrl.SeleccionarLocalidad(loc)"
-                               class="section-group" role="button" aria-label="Seleccionar localidad @locInfo?.LocalidadDescripcion">
+                            <g style="cursor:pointer;" @onclick="() => TicketCtrl.SeleccionarLocalidad(loc)" class="ring-group" role="button">
 
-                                <ellipse cx="400" cy="@(bandYOffset + bandH/2)" rx="340" ry="@(bandH/2)"
-                                         class="section-arc @colorClass" fill="none" stroke-width="@(bandH)" />
+                                <ellipse cx="@centerX" cy="@centerY" rx="@rx" ry="@ry"
+                                         fill="@bgColor" stroke="@strokeColor" stroke-width="@ringStrokeW"
+                                         style="transition:all 0.3s ease;"/>
 
-                                <rect x="60" y="@bandYOffset" width="680" height="@bandH"
-                                      fill="transparent" />
+                                <ellipse cx="@centerX" cy="@centerY" rx="@rx" ry="@ry"
+                                         fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="1.5"
+                                         pointer-events="none"/>
 
-                                <text x="400" y="@(bandYOffset + 1)" text-anchor="middle"
-                                      class="section-label" style="font-size:15px;font-weight:700;">
+                                <line x1="@(centerX + rx - ringStrokeW/2)" y1="@centerY"
+                                      x2="@(labelX - 10)" y2="@labelY"
+                                      stroke="rgba(200,169,81,0.25)" stroke-width="1"/>
+
+                                <circle cx="@labelX" cy="@labelY" r="5" fill="@strokeColor" pointer-events="none"/>
+
+                                <text x="@(labelX + 16)" y="@(labelY - 6)" class="section-label" style="font-size:16px;font-weight:700;">
                                     @locInfo?.LocalidadDescripcion
                                 </text>
-                                <text x="400" y="@(bandYOffset + 15)" text-anchor="middle"
-                                      class="section-capacity">
-                                    @disp/@total disponibles · Desde $@(locInfo?.Price ?? 0)
+                                <text x="@(labelX + 16)" y="@(labelY + 10)" class="section-capacity" style="font-size:11px;">
+                                    @disp/@total · desde $@(locInfo?.Price ?? 0)
                                 </text>
-                                <text x="400" y="@(bandYOffset + 28)" text-anchor="middle"
-                                      class="section-capacity" style="font-size:9px;">
-                                    @($"{ratio * 100:F0}% libre")
+                                <text x="@(labelX + 16)" y="@(labelY + 24)" class="section-capacity" style="font-size:10px;fill:rgba(245,240,232,0.4);">
+                                    @($"{ratio * 100:F0}% libre · Click para ver asientos")
                                 </text>
                             </g>
                             idx++;
                         }
                     }
 
+                    <!-- STADIUM TITLE -->
+                    <text x="400" y="470" text-anchor="middle" font-family="var(--font-display)" font-size="14" font-weight="700"
+                          fill="var(--color-gold)" letter-spacing="0.08em" opacity="0.5">
+                        @TicketCtrl.EstadioNombre.ToUpper()
+                    </text>
+
                     <!-- LEGEND -->
-                    <g transform="translate(560, 460)">
-                        <rect x="0" y="0" width="12" height="12" rx="2" fill="#2E7D32"/>
-                        <text x="18" y="10" style="font-family:var(--font-mono);font-size:10px;fill:rgba(245,240,232,0.5);">Disponible</text>
-                        <rect x="100" y="0" width="12" height="12" rx="2" fill="rgba(211,47,47,0.5)"/>
-                        <text x="118" y="10" style="font-family:var(--font-mono);font-size:10px;fill:rgba(245,240,232,0.5);">Ocupado</text>
-                        <rect x="190" y="0" width="12" height="12" rx="2" fill="#C8A951"/>
-                        <text x="208" y="10" style="font-family:var(--font-mono);font-size:10px;fill:rgba(245,240,232,0.5);">Seleccionado</text>
+                    <g transform="translate(580, 488)">
+                        <rect x="0" y="0" width="10" height="10" rx="2" fill="rgba(46,125,50,0.7)"/>
+                        <text x="16" y="9" font-family="var(--font-mono)" font-size="9" fill="rgba(245,240,232,0.45)">Disponible</text>
+                        <rect x="80" y="0" width="10" height="10" rx="2" fill="rgba(211,47,47,0.5)"/>
+                        <text x="96" y="9" font-family="var(--font-mono)" font-size="9" fill="rgba(245,240,232,0.45)">Ocupado</text>
+                        <rect x="155" y="0" width="10" height="10" rx="2" fill="rgba(200,169,81,0.7)"/>
+                        <text x="171" y="9" font-family="var(--font-mono)" font-size="9" fill="rgba(245,240,232,0.45)">Parcial</text>
                     </g>
+
+                    <!-- COMPASS / SCALE HINT -->
+                    <text x="40" y="480" font-family="var(--font-mono)" font-size="8" fill="rgba(245,240,232,0.15)">VISTA AÉREA</text>
+                    <text x="40" y="492" font-family="var(--font-mono)" font-size="8" fill="rgba(245,240,232,0.1)">ESCALA APROXIMADA</text>
                 </svg>
             </div>
         }

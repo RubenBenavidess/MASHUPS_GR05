@@ -204,8 +204,8 @@ a:hover { color: #E0C470; }
 .form-control, input[type="text"], input[type="number"], select {
     font-family: var(--font-body);
     font-size: 0.9rem;
-    background: rgba(10, 22, 40, 0.6);
-    border: 2px solid rgba(200, 169, 81, 0.2);
+    background: #1A2C45;
+    border: 2px solid rgba(200, 169, 81, 0.25);
     color: var(--color-chalk);
     border-radius: var(--radius-sm);
     padding: 0.6rem 0.9rem;
@@ -216,7 +216,7 @@ a:hover { color: #E0C470; }
     outline: none;
     box-shadow: 0 0 0 3px rgba(200, 169, 81, 0.15);
 }
-.form-control::placeholder { color: rgba(245, 240, 232, 0.35); }
+.form-control::placeholder, input::placeholder { color: rgba(245, 240, 232, 0.55); }
 
 select {
     appearance: none;
@@ -370,6 +370,14 @@ hr {
     width: 100%;
     height: 100%;
     display: block;
+}
+
+.ring-group:hover ellipse:first-of-type {
+    filter: drop-shadow(0 0 14px rgba(200, 169, 81, 0.5));
+    transition: filter 0.2s ease;
+}
+.ring-group ellipse:first-of-type {
+    transition: all 0.3s ease;
 }
 
 /* Section arcs */
