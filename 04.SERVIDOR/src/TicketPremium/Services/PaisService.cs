@@ -12,90 +12,54 @@ public class PaisService : IPaisService
     private readonly ILogger<PaisService> _logger;
 
     public PaisService(TicketPremiumDbContext db, ILogger<PaisService> logger)
+    { _db = db; _logger = logger; }
+
+    public async Task<List<PaisDto>> ListarPaises(string sessionToken)
     {
-        _db = db;
-        _logger = logger;
-    }
-
-    public async Task<List<PaisDto>> ListarPaises()
-    {
-        var ts = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
-        _logger.LogInformation("[{Timestamp}] Operation=ListarPaises | Params=None", ts);
-
-        var result = await _db.Paises
-            .OrderBy(p => p.Nombre)
-            .Select(p => new PaisDto
-            {
-                Codigo = p.Codigo,
-                Nombre = p.Nombre,
-                Continente = p.Continente
-            })
-            .ToListAsync();
-
-        _logger.LogInformation("[{Timestamp}] Operation=ListarPaises | ResultCount={Count}", ts, result.Count);
+        RequerirAdmin(sessionToken);
+        var ts = Now();
+        _logger.LogInformation("[{T}] Operation=ListarPaises", ts);
+        var result = await _db.Paises.OrderBy(p => p.Nombre)
+            .Select(p => new PaisDto { Codigo = p.Codigo, Nombre = p.Nombre, Continente = p.Continente }).ToListAsync();
+        _logger.LogInformation("[{T}] ListarPaises=OK | Count={C}", ts, result.Count);
         return result;
     }
 
-    public async Task<PaisDto> ObtenerPais(string codigo)
+    public async Task<PaisDto> ObtenerPais(string sessionToken, string codigo)
     {
-        var ts = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
-        _logger.LogInformation("[{Timestamp}] Operation=ObtenerPais | Params=codigo={Codigo}", ts, codigo);
-
-        var pais = await _db.Paises.FindAsync(codigo);
-        if (pais == null)
-        {
-            _logger.LogWarning("[{Timestamp}] Operation=ObtenerPais | Result=NotFound | codigo={Codigo}", ts, codigo);
-            throw new FaultException(new FaultReason("País no encontrado"), new FaultCode("NotFound"));
-        }
-
+        RequerirAdmin(sessionToken);
+        var pais = await _db.Paises.FindAsync(codigo)
+            ?? throw new FaultException(new FaultReason("Pais no encontrado"), new FaultCode("NotFound"));
         return new PaisDto { Codigo = pais.Codigo, Nombre = pais.Nombre, Continente = pais.Continente };
     }
 
-    public async Task CrearPais(PaisDto pais)
+    public async Task CrearPais(string sessionToken, PaisDto pais)
     {
-        var ts = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
-        _logger.LogInformation("[{Timestamp}] Operation=CrearPais | Params=codigo={Codigo}", ts, pais.Codigo);
-
+        RequerirAdmin(sessionToken);
         if (await _db.Paises.AnyAsync(p => p.Codigo == pais.Codigo))
-        {
-            throw new FaultException(new FaultReason("Ya existe un país con ese código"), new FaultCode("Duplicate"));
-        }
-
+            throw new FaultException(new FaultReason("Ya existe un pais con ese codigo"), new FaultCode("Duplicate"));
         _db.Paises.Add(new Pais { Codigo = pais.Codigo, Nombre = pais.Nombre, Continente = pais.Continente });
         await _db.SaveChangesAsync();
-        _logger.LogInformation("[{Timestamp}] Operation=CrearPais | Result=Success | codigo={Codigo}", ts, pais.Codigo);
     }
 
-    public async Task ActualizarPais(PaisDto pais)
+    public async Task ActualizarPais(string sessionToken, PaisDto pais)
     {
-        var ts = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
-        _logger.LogInformation("[{Timestamp}] Operation=ActualizarPais | Params=codigo={Codigo}", ts, pais.Codigo);
-
-        var existing = await _db.Paises.FindAsync(pais.Codigo);
-        if (existing == null)
-        {
-            throw new FaultException(new FaultReason("País no encontrado"), new FaultCode("NotFound"));
-        }
-
-        existing.Nombre = pais.Nombre;
-        existing.Continente = pais.Continente;
+        RequerirAdmin(sessionToken);
+        var existing = await _db.Paises.FindAsync(pais.Codigo)
+            ?? throw new FaultException(new FaultReason("Pais no encontrado"), new FaultCode("NotFound"));
+        existing.Nombre = pais.Nombre; existing.Continente = pais.Continente;
         await _db.SaveChangesAsync();
-        _logger.LogInformation("[{Timestamp}] Operation=ActualizarPais | Result=Success | codigo={Codigo}", ts, pais.Codigo);
     }
 
-    public async Task EliminarPais(string codigo)
+    public async Task EliminarPais(string sessionToken, string codigo)
     {
-        var ts = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
-        _logger.LogInformation("[{Timestamp}] Operation=EliminarPais | Params=codigo={Codigo}", ts, codigo);
-
-        var pais = await _db.Paises.FindAsync(codigo);
-        if (pais == null)
-        {
-            throw new FaultException(new FaultReason("País no encontrado"), new FaultCode("NotFound"));
-        }
-
+        RequerirAdmin(sessionToken);
+        var pais = await _db.Paises.FindAsync(codigo)
+            ?? throw new FaultException(new FaultReason("Pais no encontrado"), new FaultCode("NotFound"));
         _db.Paises.Remove(pais);
         await _db.SaveChangesAsync();
-        _logger.LogInformation("[{Timestamp}] Operation=EliminarPais | Result=Success | codigo={Codigo}", ts, codigo);
     }
+
+    private static void RequerirAdmin(string st) { if (!AuthService.EsAdmin(st)) throw new FaultException(new FaultReason("Acceso denegado. Se requiere rol ADMIN."), new FaultCode("AccesoDenegado")); }
+    private static string Now() => DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
 }

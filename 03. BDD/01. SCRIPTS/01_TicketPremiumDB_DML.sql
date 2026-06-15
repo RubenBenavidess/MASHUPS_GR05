@@ -44,12 +44,18 @@ INSERT INTO [dbo].[Partidos] ([Codigo], [EquipoLocal], [EquipoVisitante], [Fecha
 GO
 
 -- ============================================================
--- Clientes (3 registros)
+-- Clientes (5 registros)
+-- PasswordHash usa BCrypt con costo 11.
+-- Admin unico: cedula 1712345678, password "Monster9"
+-- Clientes: password "cliente123"
+-- Cedulas validas segun algoritmo ecuatoriano (digito verificador correcto)
 -- ============================================================
-INSERT INTO [dbo].[Clientes] ([Cedula], [Nombre], [Apellido], [FechaNacimiento], [Genero], [Telefono], [Email]) VALUES
-(N'1712345678', N'Juan',  N'Pérez', '1990-05-15', N'MASCULINO', N'0991234567', N'juan.perez@email.com'),
-(N'1718765432', N'María', N'García', '1985-10-20', N'FEMENINO',  N'0997654321', N'maria.garcia@email.com'),
-(N'1709876543', N'Carlos', N'López', '1995-03-08', N'MASCULINO', N'0981239876', N'carlos.lopez@email.com');
+INSERT INTO [dbo].[Clientes] ([Cedula], [Nombre], [Apellido], [FechaNacimiento], [Genero], [Telefono], [Email], [PasswordHash], [Rol]) VALUES
+(N'1712345675', N'Monster', N'Admin', '1990-01-01', N'MASCULINO', N'0999999999', N'monster@ticketpremium.com', N'$2a$11$XJudBwF4RAtP0jW70kuh5OzheSBTu1M/kZ64v9fZsNa92bV4by.Sm', N'ADMIN'),
+(N'1718765439', N'Maria', N'Garcia', '1985-10-20', N'FEMENINO',  N'0997654321', N'maria.garcia@email.com', N'$2a$11$qelASIpzU27bFaQ9x4z1D.yLsfqJT20zeDlzMYkXRbnnhygCSiOba', N'CLIENTE'),
+(N'1709876542', N'Carlos', N'Lopez', '1995-03-08', N'MASCULINO', N'0981239876', N'carlos.lopez@email.com', N'$2a$11$qelASIpzU27bFaQ9x4z1D.yLsfqJT20zeDlzMYkXRbnnhygCSiOba', N'CLIENTE'),
+(N'1712345683', N'Ana', N'Clienta', '1998-07-22', N'FEMENINO', N'0991111111', N'ana@email.com', N'$2a$11$qelASIpzU27bFaQ9x4z1D.yLsfqJT20zeDlzMYkXRbnnhygCSiOba', N'CLIENTE'),
+(N'1712345691', N'Pedro', N'Usuario', '1992-03-15', N'MASCULINO', N'0982222222', N'pedro@email.com', N'$2a$11$qelASIpzU27bFaQ9x4z1D.yLsfqJT20zeDlzMYkXRbnnhygCSiOba', N'CLIENTE');
 GO
 
 -- ============================================================

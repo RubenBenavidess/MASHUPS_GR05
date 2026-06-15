@@ -94,8 +94,17 @@ BEGIN
         [Genero]            NVARCHAR(20)    NULL,
         [Telefono]          NVARCHAR(20)    NULL,
         [Email]             NVARCHAR(200)   NULL,
+        [PasswordHash]      NVARCHAR(256)   NOT NULL DEFAULT '',
+        [Rol]               NVARCHAR(20)    NOT NULL DEFAULT 'CLIENTE',
         CONSTRAINT [PK_Clientes] PRIMARY KEY CLUSTERED ([Cedula])
     );
+END
+ELSE
+BEGIN
+    IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[Clientes]') AND name = 'PasswordHash')
+        ALTER TABLE [dbo].[Clientes] ADD [PasswordHash] NVARCHAR(256) NOT NULL DEFAULT '';
+    IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[Clientes]') AND name = 'Rol')
+        ALTER TABLE [dbo].[Clientes] ADD [Rol] NVARCHAR(20) NOT NULL DEFAULT 'CLIENTE';
 END
 GO
 

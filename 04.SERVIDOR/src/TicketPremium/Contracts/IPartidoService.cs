@@ -26,21 +26,17 @@ public class PartidoDto
 public interface IPartidoService
 {
     [OperationContract]
-    Task<List<PartidoDto>> ListarPartidos();
+    Task<List<PartidoDto>> ListarPartidos(string sessionToken);
 
     [OperationContract]
-    Task<PartidoDto> ObtenerPartido(string codigo);
+    Task<PartidoDto> ObtenerPartido(string sessionToken, string codigo);
 
     [OperationContract]
-    Task CrearPartido(PartidoDto partido);
+    Task CrearPartido(string sessionToken, PartidoDto partido);
 
     [OperationContract]
-    Task ActualizarPartido(PartidoDto partido);
+    Task ActualizarPartido(string sessionToken, PartidoDto partido);
 
     [OperationContract]
-    Task EliminarPartido(string codigo);
-
-    // En tu interface IPartidoService
-    //[OperationContract]
-    //Task<List<AsientoDto>> ListarAsientosPorPartido(string codigoPartido);
+    Task EliminarPartido(string sessionToken, string codigo);
 }

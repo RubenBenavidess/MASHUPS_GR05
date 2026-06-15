@@ -48,8 +48,8 @@ public class ResumenClienteDto
 public interface IReporteService
 {
     [OperationContract]
-    Task<List<ResumenLocalidadDto>> ResumenVentasPorPartido(string codigoPartido);
+    Task<List<ResumenLocalidadDto>> ResumenVentasPorPartido(string sessionToken, string codigoPartido);
 
     [OperationContract]
-    Task<List<ResumenClienteDto>> ResumenVentasPorCliente(string cedulaCliente);
+    Task<List<ResumenClienteDto>> ResumenVentasPorCliente(string sessionToken, string cedulaCliente);
 }

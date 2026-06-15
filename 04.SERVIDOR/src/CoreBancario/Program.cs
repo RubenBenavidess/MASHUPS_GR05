@@ -14,11 +14,10 @@ namespace ec.edu.monster.CoreBancario
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            /*
             builder.WebHost.UseKestrel(options =>
             {
-                options.ListenLocalhost(5002);
-            });*/
+                options.ListenLocalhost(9098);
+            });
 
             builder.Services.AddServiceModelServices();
             builder.Services.AddServiceModelMetadata();

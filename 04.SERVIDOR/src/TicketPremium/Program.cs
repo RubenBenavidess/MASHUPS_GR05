@@ -14,11 +14,10 @@ public class Program
     {
         var builder = WebApplication.CreateBuilder(args);
 
-        /*
         builder.WebHost.UseKestrel(options =>
         {
-            options.ListenLocalhost(5003);
-        });*/
+            options.ListenLocalhost(9099);
+        });
 
         builder.Services.AddServiceModelServices();
 
@@ -33,6 +32,7 @@ public class Program
         builder.Services.AddScoped<FacturaService>();
         builder.Services.AddScoped<ReporteService>();
         builder.Services.AddScoped<CompraService>();
+        builder.Services.AddScoped<AuthService>();
 
         builder.Services.AddSingleton<FifaSoapClient>();
         builder.Services.AddSingleton<BancoSoapClient>();
@@ -94,6 +94,10 @@ public class Program
             serviceBuilder.AddService<CompraService>();
             serviceBuilder.AddServiceEndpoint<CompraService, ICompraService>(
                 new BasicHttpBinding(), "/CompraService.svc");
+
+            serviceBuilder.AddService<AuthService>();
+            serviceBuilder.AddServiceEndpoint<AuthService, IAuthService>(
+                new BasicHttpBinding(), "/AuthService.svc");
         });
 
         app.Run();

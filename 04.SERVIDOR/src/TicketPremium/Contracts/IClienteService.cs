@@ -26,23 +26,26 @@ public class ClienteDto
 
     [DataMember]
     public string Email { get; set; } = string.Empty;
+
+    [DataMember]
+    public string Rol { get; set; } = string.Empty;
 }
 
 [ServiceContract]
 public interface IClienteService
 {
     [OperationContract]
-    Task<List<ClienteDto>> ListarClientes();
+    Task<List<ClienteDto>> ListarClientes(string sessionToken);
 
     [OperationContract]
-    Task<ClienteDto> ObtenerCliente(string cedula);
+    Task<ClienteDto> ObtenerCliente(string sessionToken, string cedula);
 
     [OperationContract]
-    Task CrearCliente(ClienteDto cliente);
+    Task CrearCliente(string sessionToken, ClienteDto cliente);
 
     [OperationContract]
-    Task ActualizarCliente(ClienteDto cliente);
+    Task ActualizarCliente(string sessionToken, ClienteDto cliente);
 
     [OperationContract]
-    Task EliminarCliente(string cedula);
+    Task EliminarCliente(string sessionToken, string cedula);
 }

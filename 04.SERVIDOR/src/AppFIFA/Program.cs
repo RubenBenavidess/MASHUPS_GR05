@@ -15,7 +15,7 @@ public class Program
     {
         var builder = WebApplication.CreateBuilder(args);
 
-        builder.WebHost.UseUrls("http://localhost:5001");
+        builder.WebHost.UseUrls("http://localhost:9097");
 
         builder.Services.AddServiceModelServices();
 

@@ -20,8 +20,8 @@ public class CompraResponse
 public interface ICompraService
 {
     [OperationContract]
-    Task<CompraResponse> ComprarEnEfectivo(List<string> codigosAsiento, string clienteCedula);
+    Task<CompraResponse> ComprarEnEfectivo(string sessionToken, List<string> codigosAsiento, string clienteCedula);
 
     [OperationContract]
-    Task<CompraResponse> ComprarACredito(List<string> codigosAsiento, string clienteCedula, int plazoMeses);
+    Task<CompraResponse> ComprarACredito(string sessionToken, List<string> codigosAsiento, string clienteCedula, int plazoMeses);
 }

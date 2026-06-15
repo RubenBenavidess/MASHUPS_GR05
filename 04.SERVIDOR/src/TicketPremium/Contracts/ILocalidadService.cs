@@ -26,17 +26,17 @@ public class LocalidadDto
 public interface ILocalidadService
 {
     [OperationContract]
-    Task<List<LocalidadDto>> ListarLocalidades();
+    Task<List<LocalidadDto>> ListarLocalidades(string sessionToken);
 
     [OperationContract]
-    Task<LocalidadDto> ObtenerLocalidad(string codigo);
+    Task<LocalidadDto> ObtenerLocalidad(string sessionToken, string codigo);
 
     [OperationContract]
-    Task CrearLocalidad(LocalidadDto localidad);
+    Task CrearLocalidad(string sessionToken, LocalidadDto localidad);
 
     [OperationContract]
-    Task ActualizarLocalidad(LocalidadDto localidad);
+    Task ActualizarLocalidad(string sessionToken, LocalidadDto localidad);
 
     [OperationContract]
-    Task EliminarLocalidad(string codigo);
+    Task EliminarLocalidad(string sessionToken, string codigo);
 }

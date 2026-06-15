@@ -54,5 +54,5 @@ public class FacturaResponse
 public interface IFacturaService
 {
     [OperationContract]
-    Task<FacturaResponse> CalcularFactura(List<string> codigosAsiento, bool esEfectivo, string clienteCedula);
+    Task<FacturaResponse> CalcularFactura(string sessionToken, List<string> codigosAsiento, bool esEfectivo, string clienteCedula);
 }

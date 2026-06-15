@@ -26,17 +26,17 @@ public class EstadioDto
 public interface IEstadioService
 {
     [OperationContract]
-    Task<List<EstadioDto>> ListarEstadios();
+    Task<List<EstadioDto>> ListarEstadios(string sessionToken);
 
     [OperationContract]
-    Task<EstadioDto> ObtenerEstadio(string codigo);
+    Task<EstadioDto> ObtenerEstadio(string sessionToken, string codigo);
 
     [OperationContract]
-    Task CrearEstadio(EstadioDto estadio);
+    Task CrearEstadio(string sessionToken, EstadioDto estadio);
 
     [OperationContract]
-    Task ActualizarEstadio(EstadioDto estadio);
+    Task ActualizarEstadio(string sessionToken, EstadioDto estadio);
 
     [OperationContract]
-    Task EliminarEstadio(string codigo);
+    Task EliminarEstadio(string sessionToken, string codigo);
 }

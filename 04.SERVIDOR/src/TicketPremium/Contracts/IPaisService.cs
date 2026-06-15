@@ -20,17 +20,17 @@ public class PaisDto
 public interface IPaisService
 {
     [OperationContract]
-    Task<List<PaisDto>> ListarPaises();
+    Task<List<PaisDto>> ListarPaises(string sessionToken);
 
     [OperationContract]
-    Task<PaisDto> ObtenerPais(string codigo);
+    Task<PaisDto> ObtenerPais(string sessionToken, string codigo);
 
     [OperationContract]
-    Task CrearPais(PaisDto pais);
+    Task CrearPais(string sessionToken, PaisDto pais);
 
     [OperationContract]
-    Task ActualizarPais(PaisDto pais);
+    Task ActualizarPais(string sessionToken, PaisDto pais);
 
     [OperationContract]
-    Task EliminarPais(string codigo);
+    Task EliminarPais(string sessionToken, string codigo);
 }

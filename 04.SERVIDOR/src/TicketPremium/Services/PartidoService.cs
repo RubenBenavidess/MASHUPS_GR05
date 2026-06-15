@@ -12,107 +12,51 @@ public class PartidoService : IPartidoService
     private readonly ILogger<PartidoService> _logger;
 
     public PartidoService(TicketPremiumDbContext db, ILogger<PartidoService> logger)
+    { _db = db; _logger = logger; }
+
+    public async Task<List<PartidoDto>> ListarPartidos(string sessionToken)
     {
-        _db = db;
-        _logger = logger;
-    }
-
-    public async Task<List<PartidoDto>> ListarPartidos()
-    {
-        var ts = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
-        _logger.LogInformation("[{Timestamp}] Operation=ListarPartidos | Params=None", ts);
-
-        var result = await _db.Partidos
-            .OrderBy(p => p.FechaHora)
-            .Select(p => new PartidoDto
-            {
-                Codigo = p.Codigo,
-                EquipoLocal = p.EquipoLocal,
-                EquipoVisitante = p.EquipoVisitante,
-                FechaHora = p.FechaHora,
-                EstadioCodigo = p.EstadioCodigo
-            })
-            .ToListAsync();
-
-        _logger.LogInformation("[{Timestamp}] Operation=ListarPartidos | ResultCount={Count}", ts, result.Count);
+        RequerirAdminOCliente(sessionToken);
+        var result = await _db.Partidos.OrderBy(p => p.FechaHora)
+            .Select(p => new PartidoDto { Codigo = p.Codigo, EquipoLocal = p.EquipoLocal, EquipoVisitante = p.EquipoVisitante, FechaHora = p.FechaHora, EstadioCodigo = p.EstadioCodigo }).ToListAsync();
         return result;
     }
 
-    public async Task<PartidoDto> ObtenerPartido(string codigo)
+    public async Task<PartidoDto> ObtenerPartido(string sessionToken, string codigo)
     {
-        var ts = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
-        _logger.LogInformation("[{Timestamp}] Operation=ObtenerPartido | Params=codigo={Codigo}", ts, codigo);
-
-        var partido = await _db.Partidos.FindAsync(codigo);
-        if (partido == null)
-        {
-            throw new FaultException(new FaultReason("Partido no encontrado"), new FaultCode("NotFound"));
-        }
-
-        return new PartidoDto
-        {
-            Codigo = partido.Codigo,
-            EquipoLocal = partido.EquipoLocal,
-            EquipoVisitante = partido.EquipoVisitante,
-            FechaHora = partido.FechaHora,
-            EstadioCodigo = partido.EstadioCodigo
-        };
+        RequerirAdminOCliente(sessionToken);
+        var p = await _db.Partidos.FindAsync(codigo)
+            ?? throw new FaultException(new FaultReason("Partido no encontrado"), new FaultCode("NotFound"));
+        return new PartidoDto { Codigo = p.Codigo, EquipoLocal = p.EquipoLocal, EquipoVisitante = p.EquipoVisitante, FechaHora = p.FechaHora, EstadioCodigo = p.EstadioCodigo };
     }
 
-    public async Task CrearPartido(PartidoDto partido)
+    public async Task CrearPartido(string sessionToken, PartidoDto partido)
     {
-        var ts = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
-        _logger.LogInformation("[{Timestamp}] Operation=CrearPartido | Params=codigo={Codigo}", ts, partido.Codigo);
-
+        RequerirAdmin(sessionToken);
         if (await _db.Partidos.AnyAsync(p => p.Codigo == partido.Codigo))
-        {
-            throw new FaultException(new FaultReason("Ya existe un partido con ese código"), new FaultCode("Duplicate"));
-        }
-
-        _db.Partidos.Add(new Partido
-        {
-            Codigo = partido.Codigo,
-            EquipoLocal = partido.EquipoLocal,
-            EquipoVisitante = partido.EquipoVisitante,
-            FechaHora = partido.FechaHora,
-            EstadioCodigo = partido.EstadioCodigo
-        });
+            throw new FaultException(new FaultReason("Ya existe un partido con ese codigo"), new FaultCode("Duplicate"));
+        _db.Partidos.Add(new Partido { Codigo = partido.Codigo, EquipoLocal = partido.EquipoLocal, EquipoVisitante = partido.EquipoVisitante, FechaHora = partido.FechaHora, EstadioCodigo = partido.EstadioCodigo });
         await _db.SaveChangesAsync();
-        _logger.LogInformation("[{Timestamp}] Operation=CrearPartido | Result=Success", ts);
     }
 
-    public async Task ActualizarPartido(PartidoDto partido)
+    public async Task ActualizarPartido(string sessionToken, PartidoDto partido)
     {
-        var ts = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
-        _logger.LogInformation("[{Timestamp}] Operation=ActualizarPartido | Params=codigo={Codigo}", ts, partido.Codigo);
-
-        var existing = await _db.Partidos.FindAsync(partido.Codigo);
-        if (existing == null)
-        {
-            throw new FaultException(new FaultReason("Partido no encontrado"), new FaultCode("NotFound"));
-        }
-
-        existing.EquipoLocal = partido.EquipoLocal;
-        existing.EquipoVisitante = partido.EquipoVisitante;
-        existing.FechaHora = partido.FechaHora;
-        existing.EstadioCodigo = partido.EstadioCodigo;
+        RequerirAdmin(sessionToken);
+        var p = await _db.Partidos.FindAsync(partido.Codigo)
+            ?? throw new FaultException(new FaultReason("Partido no encontrado"), new FaultCode("NotFound"));
+        p.EquipoLocal = partido.EquipoLocal; p.EquipoVisitante = partido.EquipoVisitante; p.FechaHora = partido.FechaHora; p.EstadioCodigo = partido.EstadioCodigo;
         await _db.SaveChangesAsync();
-        _logger.LogInformation("[{Timestamp}] Operation=ActualizarPartido | Result=Success", ts);
     }
 
-    public async Task EliminarPartido(string codigo)
+    public async Task EliminarPartido(string sessionToken, string codigo)
     {
-        var ts = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
-        _logger.LogInformation("[{Timestamp}] Operation=EliminarPartido | Params=codigo={Codigo}", ts, codigo);
-
-        var partido = await _db.Partidos.FindAsync(codigo);
-        if (partido == null)
-        {
-            throw new FaultException(new FaultReason("Partido no encontrado"), new FaultCode("NotFound"));
-        }
-
-        _db.Partidos.Remove(partido);
+        RequerirAdmin(sessionToken);
+        var p = await _db.Partidos.FindAsync(codigo)
+            ?? throw new FaultException(new FaultReason("Partido no encontrado"), new FaultCode("NotFound"));
+        _db.Partidos.Remove(p);
         await _db.SaveChangesAsync();
-        _logger.LogInformation("[{Timestamp}] Operation=EliminarPartido | Result=Success", ts);
     }
+
+    private static void RequerirAdmin(string st) { if (!AuthService.EsAdmin(st)) throw new FaultException(new FaultReason("Acceso denegado. Se requiere rol ADMIN."), new FaultCode("AccesoDenegado")); }
+    private static void RequerirAdminOCliente(string st) { if (!AuthService.EsAdmin(st) && !AuthService.EsClienteValido(st, out _)) throw new FaultException(new FaultReason("Acceso denegado. Inicie sesion."), new FaultCode("AccesoDenegado")); }
 }
