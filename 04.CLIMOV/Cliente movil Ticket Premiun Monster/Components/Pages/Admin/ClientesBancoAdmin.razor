@@ -1,0 +1,600 @@
+@page "/admin/clientes-banco"
+@using ec.edu.monster.TicketClient.State
+@inject AuthState AuthState
+@inject NavigationManager NavManager
+@using BancoAdminService
+@using ClienteService
+@inject BancoAdminServiceClient BancoAdminService
+@inject ClienteServiceClient ClienteService
+
+<h3>Administración de Clientes (Core Bancario)</h3>
+<p style="color: rgba(245,240,232,0.6); font-size: 0.9rem;">
+    Esta pantalla permite integrar clientes entre Ticket Premium y el Core Bancario.
+</p>
+
+<!-- Tabs -->
+<ul class="nav nav-tabs" style="margin-top: 1.5rem; border-bottom: 2px solid var(--color-gold);">
+    <li class="nav-item">
+        <a class="nav-link @(activeTab == "registrar" ? "active" : "")" style="cursor: pointer; background-color: @(activeTab == "registrar" ? "var(--color-gold)" : "transparent"); color: @(activeTab == "registrar" ? "black" : "white"); font-weight: bold;" @onclick='() => SetActiveTab("registrar")'>Registrar Cliente</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link @(activeTab == "listar" ? "active" : "")" style="cursor: pointer; background-color: @(activeTab == "listar" ? "var(--color-gold)" : "transparent"); color: @(activeTab == "listar" ? "black" : "white"); font-weight: bold;" @onclick='() => SetActiveTab("listar")'>Ver Clientes</a>
+    </li>
+</ul>
+
+<div class="card" style="margin-top: 1.5rem;">
+    <div class="card-body">
+
+        @if (activeTab == "registrar")
+        {
+            <h4>Crear Nuevo Cliente Bancario</h4>
+            <div class="form-group" style="margin-bottom: 1rem;">
+                <label style="display: block; font-size: 0.85rem; color: rgba(245,240,232,0.6); margin-bottom: 0.4rem;">Cédula:</label>
+                <div style="display: flex; gap: 0.5rem;">
+                    <input @bind="request.Cedula" class="form-control" placeholder="1712345675" />
+                    <button class="btn btn-secondary" @onclick="BuscarCedula" disabled="@isSearching">
+                        @(isSearching ? "Buscando..." : "Buscar")
+                    </button>
+                </div>
+            </div>
+
+            @if (!clienteEncontrado && busquedaRealizada)
+            {
+                <div style="background: rgba(211,47,47,0.15); border: 1px solid rgba(211,47,47,0.3); border-radius: 8px; padding: 0.8rem; margin-bottom: 1rem;">
+                    <span style="font-size: 0.85rem; color: var(--color-referee); display: block; margin-bottom: 0.5rem;">
+                        No se encontró ningún cliente en TicketPremium con esta cédula.
+                    </span>
+                    <button class="btn" style="background-color: var(--color-gold); color: black; font-weight: bold;" @onclick='() => NavManager.NavigateTo("/crear-cuenta")'>Registrar usuario nuevo</button>
+                </div>
+            }
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div class="form-group">
+                    <label style="display: block; font-size: 0.85rem; color: rgba(245,240,232,0.6); margin-bottom: 0.4rem;">Nombre:</label>
+                    <input @bind="request.Nombre" class="form-control" disabled="@(!clienteEncontrado)" />
+                </div>
+                <div class="form-group">
+                    <label style="display: block; font-size: 0.85rem; color: rgba(245,240,232,0.6); margin-bottom: 0.4rem;">Apellido:</label>
+                    <input @bind="request.Apellido" class="form-control" disabled="@(!clienteEncontrado)" />
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div class="form-group">
+                    <label style="display: block; font-size: 0.85rem; color: rgba(245,240,232,0.6); margin-bottom: 0.4rem;">Fecha de Nacimiento:</label>
+                    <input type="date" @bind="request.FechaNacimiento" class="form-control" disabled="@(!clienteEncontrado)" />
+                </div>
+                <div class="form-group">
+                    <label style="display: block; font-size: 0.85rem; color: rgba(245,240,232,0.6); margin-bottom: 0.4rem;">Género:</label>
+                    <select @bind="request.Genero" class="form-control" disabled="@(!clienteEncontrado)">
+                        <option value="MASCULINO">MASCULINO</option>
+                        <option value="FEMENINO">FEMENINO</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label style="display: block; font-size: 0.85rem; color: rgba(245,240,232,0.6); margin-bottom: 0.4rem;">
+                    Depósito Inicial (Ahorros simulado hace 1 mes):
+                </label>
+                <div style="display:flex; align-items:center;">
+                    <span style="font-size: 1.2rem; margin-right: 0.5rem; color: var(--color-gold);">$</span>
+                    <input type="number" @bind="request.DepositoInicial" class="form-control" style="width: 150px; font-weight: bold;" disabled="@(!clienteEncontrado)" />
+                </div>
+                <small style="color: rgba(245,240,232,0.4); display: block; margin-top: 0.4rem;">
+                    Un depósito inicial de $1,000 otorgará un cupo de crédito aproximado de $1,800.
+                </small>
+            </div>
+
+            @if (!string.IsNullOrEmpty(mensajeError))
+            {
+                <div style="background: rgba(211,47,47,0.15); border: 1px solid rgba(211,47,47,0.3); border-radius: 8px; padding: 0.8rem; margin-bottom: 1rem;">
+                    <span style="font-size: 0.85rem; color: var(--color-referee);">@mensajeError</span>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(mensajeExito))
+            {
+                <div style="background: rgba(76,175,80,0.15); border: 1px solid rgba(76,175,80,0.3); border-radius: 8px; padding: 0.8rem; margin-bottom: 1rem;">
+                    <span style="font-size: 0.85rem; color: var(--color-turf);">@mensajeExito</span>
+                </div>
+            }
+
+            <button class="btn btn-primary" @onclick="RegistrarClienteBancario" disabled="@(!clienteEncontrado || isProcessing)" style="width: 100%; padding: 0.8rem; font-weight: bold;">
+                @(isProcessing ? "Procesando..." : "Registrar en el Core Bancario")
+            </button>
+        }
+        else if (activeTab == "listar")
+        {
+            <h4>Clientes del Core Bancario</h4>
+            
+            @if (isLoadingList)
+            {
+                <p>Cargando lista de clientes...</p>
+            }
+            else if (listaClientes != null && listaClientes.Count > 0)
+            {
+                <table class="table table-dark table-hover" style="margin-top: 1rem;">
+                    <thead>
+                        <tr>
+                            <th style="color: var(--color-gold);">Cédula</th>
+                            <th style="color: var(--color-gold);">Nombre</th>
+                            <th style="color: var(--color-gold);">Apellido</th>
+                            <th style="color: var(--color-gold);">Nacimiento</th>
+                            <th style="color: var(--color-gold);">Género</th>
+                            <th style="color: var(--color-gold);">Estado</th>
+                            <th style="color: var(--color-gold); text-align: center;">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var c in listaClientes)
+                        {
+                            <tr>
+                                <td>@c.Cedula</td>
+                                <td>@c.Nombre</td>
+                                <td>@c.Apellido</td>
+                                <td>@c.FechaNacimiento.ToString("dd/MM/yyyy")</td>
+                                <td>@c.Genero</td>
+                                <td>
+                                    @if (c.Estado == "ACTIVO")
+                                    {
+                                        <span class="badge bg-success">@c.Estado</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger">@c.Estado</span>
+                                    }
+                                </td>
+                                <td style="text-align: center; display: flex; gap: 0.5rem; justify-content: center;">
+                                    <button class="btn btn-sm btn-info" @onclick="() => AbrirModalInfo(c.Cedula)" title="Ver más información">👁️</button>
+                                    <button class="btn btn-sm btn-warning" @onclick="() => AbrirModalEditar(c)" title="Editar Cliente">✏️</button>
+                                    <button class="btn btn-sm btn-danger" @onclick="() => AbrirModalEliminar(c.Cedula)" title="Eliminar Cliente">🗑️</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <p>No se encontraron clientes bancarios.</p>
+            }
+        }
+    </div>
+</div>
+
+<!-- Modal Info -->
+@if (mostrarModalInfo)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.6);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="background-color: #212529; border: 1px solid var(--color-gold);">
+                <div class="modal-header" style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <h5 class="modal-title" style="color: var(--color-gold);">Información del Cliente: @cedulaSeleccionada</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CerrarModalInfo"></button>
+                </div>
+                <div class="modal-body">
+                    @if (isLoadingInfo)
+                    {
+                        <p>Cargando información...</p>
+                    }
+                    else if (clienteDetalle != null && clienteDetalle.Exitoso)
+                    {
+                        <div style="margin-bottom: 1.5rem;">
+                            <h6 style="color: rgba(245,240,232,0.8);">Saldo Ahorros</h6>
+                            <h3 style="color: var(--color-turf);">$ @clienteDetalle.SaldoAhorros.ToString("0.00")</h3>
+                        </div>
+
+                        <h6 style="color: rgba(245,240,232,0.8);">Créditos</h6>
+                        @if (clienteDetalle.Creditos != null && clienteDetalle.Creditos.Count > 0)
+                        {
+                            <ul class="list-group list-group-flush">
+                                @foreach (var cr in clienteDetalle.Creditos)
+                                {
+                                    <li class="list-group-item" style="background-color: transparent; border-color: rgba(255,255,255,0.1); color: white;">
+                                        <strong>Monto:</strong> $@cr.Monto.ToString("0.00")<br/>
+                                        <strong>Plazo:</strong> @cr.PlazoMeses meses<br/>
+                                        <strong>Fecha:</strong> @cr.FechaAprobacion.ToString("dd/MM/yyyy")<br/>
+                                        <strong>Estado:</strong> 
+                                        @if (cr.Estado == "VIGENTE")
+                                        {
+                                            <span style="color: var(--color-turf);">@cr.Estado</span>
+                                        }
+                                        else
+                                        {
+                                            <span style="color: var(--color-gold);">@cr.Estado</span>
+                                        }
+                                    </li>
+                                }
+                            </ul>
+                        }
+                        else
+                        {
+                            <p style="color: rgba(255,255,255,0.5);">No tiene créditos registrados.</p>
+                        }
+                    }
+                    else
+                    {
+                        <div class="alert alert-danger">
+                            @(clienteDetalle?.Mensaje ?? "Error al obtener la información.")
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer" style="border-top: 1px solid rgba(255,255,255,0.1);">
+                    <button type="button" class="btn btn-secondary" @onclick="CerrarModalInfo">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Modal Editar -->
+@if (mostrarModalEditar)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.6);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="background-color: #212529; border: 1px solid var(--color-gold);">
+                <div class="modal-header" style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <h5 class="modal-title" style="color: var(--color-gold);">Editar Cliente</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CerrarModalEditar"></button>
+                </div>
+                <div class="modal-body">
+                    @if (clienteEdicion != null)
+                    {
+                        <div class="form-group mb-2">
+                            <label style="color: rgba(245,240,232,0.6);">Nombre</label>
+                            <input @bind="clienteEdicion.Nombre" class="form-control" />
+                        </div>
+                        <div class="form-group mb-2">
+                            <label style="color: rgba(245,240,232,0.6);">Apellido</label>
+                            <input @bind="clienteEdicion.Apellido" class="form-control" />
+                        </div>
+                        <div class="form-group mb-2">
+                            <label style="color: rgba(245,240,232,0.6);">Fecha de Nacimiento</label>
+                            <input type="date" @bind="clienteEdicion.FechaNacimiento" class="form-control" />
+                        </div>
+                        <div class="form-group mb-2">
+                            <label style="color: rgba(245,240,232,0.6);">Género</label>
+                            <select @bind="clienteEdicion.Genero" class="form-control">
+                                <option value="MASCULINO">MASCULINO</option>
+                                <option value="FEMENINO">FEMENINO</option>
+                            </select>
+                        </div>
+                        <div class="form-group mb-2">
+                            <label style="color: rgba(245,240,232,0.6);">Estado</label>
+                            <select @bind="clienteEdicion.Estado" class="form-control">
+                                <option value="ACTIVO">ACTIVO</option>
+                                <option value="INACTIVO">INACTIVO</option>
+                            </select>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(mensajeModalEdicion))
+                        {
+                            <div class="alert alert-info mt-2">@mensajeModalEdicion</div>
+                        }
+                    }
+                </div>
+                <div class="modal-footer" style="border-top: 1px solid rgba(255,255,255,0.1);">
+                    <button type="button" class="btn btn-secondary" @onclick="CerrarModalEditar" disabled="@isProcessingModal">Cancelar</button>
+                    <button type="button" class="btn btn-warning" @onclick="GuardarEdicion" disabled="@isProcessingModal">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Modal Eliminar -->
+@if (mostrarModalEliminar)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.6);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="background-color: #212529; border: 1px solid var(--color-referee);">
+                <div class="modal-header" style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <h5 class="modal-title" style="color: var(--color-referee);">Confirmar Eliminación</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CerrarModalEliminar"></button>
+                </div>
+                <div class="modal-body">
+                    <p>¿Está seguro de que desea eliminar al cliente con cédula <strong>@cedulaSeleccionada</strong>?</p>
+                    <p style="font-size: 0.85rem; color: rgba(245,240,232,0.6);">Esta acción eliminará también sus cuentas, ahorros y créditos en el Core Bancario. No se puede deshacer.</p>
+
+                    @if (!string.IsNullOrEmpty(mensajeModalEliminacion))
+                    {
+                        <div class="alert alert-info mt-2">@mensajeModalEliminacion</div>
+                    }
+                </div>
+                <div class="modal-footer" style="border-top: 1px solid rgba(255,255,255,0.1);">
+                    <button type="button" class="btn btn-secondary" @onclick="CerrarModalEliminar" disabled="@isProcessingModal">Cancelar</button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmarEliminacion" disabled="@isProcessingModal">Eliminar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private string activeTab = "registrar";
+    private CrearClienteBancoRequest request = new CrearClienteBancoRequest
+    {
+        FechaNacimiento = DateTime.Now.AddYears(-20),
+        Genero = "MASCULINO",
+        DepositoInicial = 1000
+    };
+
+    private bool isSearching = false;
+    private bool busquedaRealizada = false;
+    private bool clienteEncontrado = false;
+
+    private bool isProcessing = false;
+    private string mensajeError = "";
+    private string mensajeExito = "";
+
+    private bool isLoadingList = false;
+    private List<BancoAdminService.ClienteBancoDto> listaClientes = new();
+
+    // Estado Modales
+    private bool mostrarModalInfo = false;
+    private bool isLoadingInfo = false;
+    private string cedulaSeleccionada = "";
+    private BancoAdminService.ClienteDetalleResponse clienteDetalle;
+
+    private bool mostrarModalEditar = false;
+    private BancoAdminService.ClienteBancoDto clienteEdicion;
+    private string mensajeModalEdicion = "";
+    
+    private bool mostrarModalEliminar = false;
+    private string mensajeModalEliminacion = "";
+    
+    private bool isProcessingModal = false;
+
+    protected override void OnInitialized()
+    {
+        if (AuthState.Token == null || !AuthState.IsAdmin)
+        {
+            NavManager.NavigateTo("/login");
+        }
+    }
+
+    private async Task SetActiveTab(string tab)
+    {
+        activeTab = tab;
+        if (tab == "listar")
+        {
+            await CargarListaClientes();
+        }
+    }
+
+    private async Task BuscarCedula()
+    {
+        mensajeError = "";
+        mensajeExito = "";
+        busquedaRealizada = false;
+        clienteEncontrado = false;
+
+        if (string.IsNullOrWhiteSpace(request.Cedula))
+        {
+            mensajeError = "Ingrese una cédula para buscar.";
+            return;
+        }
+
+        if (!ec.edu.monster.TicketClient.Utils.CedulaValidator.EsValida(request.Cedula, out var errorCedula))
+        {
+            mensajeError = errorCedula;
+            return;
+        }
+
+        isSearching = true;
+
+        try
+        {
+            var r = await ClienteService.ObtenerClienteAsync(AuthState.Token, request.Cedula);
+            if (r != null)
+            {
+                request.Nombre = r.Nombre;
+                request.Apellido = r.Apellido;
+                request.FechaNacimiento = r.FechaNacimiento;
+                
+                string s = (r.Genero ?? "").ToUpper();
+                if (s.StartsWith("M")) request.Genero = "MASCULINO";
+                else if (s.StartsWith("F")) request.Genero = "FEMENINO";
+
+                clienteEncontrado = true;
+                mensajeExito = "Cliente encontrado en Ticket Premium. Puede proceder a registrarlo en el banco.";
+            }
+            else
+            {
+                mensajeError = "No se encontró el cliente.";
+            }
+        }
+        catch (Exception ex)
+        {
+            mensajeError = "Error al conectar con el servidor.";
+            Console.WriteLine(ex);
+        }
+        finally
+        {
+            busquedaRealizada = true;
+            isSearching = false;
+        }
+    }
+
+    private async Task RegistrarClienteBancario()
+    {
+        if (!clienteEncontrado) return;
+
+        mensajeError = "";
+        mensajeExito = "";
+        isProcessing = true;
+
+        try
+        {
+            var res = await BancoAdminService.CrearClienteBancoAsync(AuthState.Token, request);
+            if (res.Exitoso)
+            {
+                mensajeExito = res.Mensaje;
+                clienteEncontrado = false;
+                busquedaRealizada = false;
+                request = new CrearClienteBancoRequest
+                {
+                    FechaNacimiento = DateTime.Now.AddYears(-20),
+                    Genero = "MASCULINO",
+                    DepositoInicial = 1000
+                };
+            }
+            else
+            {
+                mensajeError = res.Mensaje;
+            }
+        }
+        catch (Exception ex)
+        {
+            mensajeError = "Ocurrió un error al intentar crear la cuenta en el Core Bancario.";
+            Console.WriteLine(ex);
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    private async Task CargarListaClientes()
+    {
+        isLoadingList = true;
+        listaClientes.Clear();
+        try
+        {
+            var res = await BancoAdminService.ListarClientesBancoAsync(AuthState.Token);
+            if (res.Exitoso && res.Clientes != null)
+            {
+                listaClientes = res.Clientes;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex);
+        }
+        finally
+        {
+            isLoadingList = false;
+        }
+    }
+
+    // Lógica Modal Información
+    private async Task AbrirModalInfo(string cedula)
+    {
+        cedulaSeleccionada = cedula;
+        mostrarModalInfo = true;
+        isLoadingInfo = true;
+        clienteDetalle = null;
+
+        try
+        {
+            clienteDetalle = await BancoAdminService.ObtenerClienteDetalleAsync(AuthState.Token, cedula);
+        }
+        catch (Exception ex)
+        {
+            clienteDetalle = new ClienteDetalleResponse { Exitoso = false, Mensaje = "Error de conexión." };
+        }
+        finally
+        {
+            isLoadingInfo = false;
+        }
+    }
+
+    private void CerrarModalInfo()
+    {
+        mostrarModalInfo = false;
+        clienteDetalle = null;
+    }
+
+    // Lógica Modal Editar
+    private void AbrirModalEditar(BancoAdminService.ClienteBancoDto cliente)
+    {
+        clienteEdicion = new BancoAdminService.ClienteBancoDto
+        {
+            Cedula = cliente.Cedula,
+            Nombre = cliente.Nombre,
+            Apellido = cliente.Apellido,
+            FechaNacimiento = cliente.FechaNacimiento,
+            Genero = cliente.Genero,
+            Estado = string.IsNullOrEmpty(cliente.Estado) ? "ACTIVO" : cliente.Estado
+        };
+        mensajeModalEdicion = "";
+        mostrarModalEditar = true;
+    }
+
+    private void CerrarModalEditar()
+    {
+        mostrarModalEditar = false;
+        clienteEdicion = null;
+    }
+
+    private async Task GuardarEdicion()
+    {
+        isProcessingModal = true;
+        mensajeModalEdicion = "";
+
+        try
+        {
+            var res = await BancoAdminService.ActualizarClienteBancoAsync(AuthState.Token, clienteEdicion);
+            if (res.Exitoso)
+            {
+                CerrarModalEditar();
+                await CargarListaClientes();
+            }
+            else
+            {
+                mensajeModalEdicion = res.Mensaje;
+            }
+        }
+        catch (Exception ex)
+        {
+            mensajeModalEdicion = "Error interno.";
+        }
+        finally
+        {
+            isProcessingModal = false;
+        }
+    }
+
+    // Lógica Modal Eliminar
+    private void AbrirModalEliminar(string cedula)
+    {
+        cedulaSeleccionada = cedula;
+        mensajeModalEliminacion = "";
+        mostrarModalEliminar = true;
+    }
+
+    private void CerrarModalEliminar()
+    {
+        mostrarModalEliminar = false;
+        cedulaSeleccionada = "";
+    }
+
+    private async Task ConfirmarEliminacion()
+    {
+        isProcessingModal = true;
+        mensajeModalEliminacion = "";
+
+        try
+        {
+            var res = await BancoAdminService.EliminarClienteBancoAsync(AuthState.Token, cedulaSeleccionada);
+            if (res.Exitoso)
+            {
+                CerrarModalEliminar();
+                await CargarListaClientes();
+            }
+            else
+            {
+                mensajeModalEliminacion = res.Mensaje;
+            }
+        }
+        catch (Exception ex)
+        {
+            mensajeModalEliminacion = "Error interno.";
+        }
+        finally
+        {
+            isProcessingModal = false;
+        }
+    }
+}

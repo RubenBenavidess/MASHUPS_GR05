@@ -114,7 +114,7 @@ namespace ec.edu.monster.CoreBancario.Services
                 return new MontoMaximoResponse { Exitoso = true, MontoMaximo = 0, Mensaje = "No se encontraron depósitos en los últimos 3 meses." };
             }
 
-            var montoMaximo = ((promDep3Meses - promRet3Meses) * 0.30m) * 6;
+            var montoMaximo = ((promDep3Meses - promRet3Meses) * 0.35m) * 6;
 
             if (montoMaximo <= 0)
             {
@@ -163,14 +163,40 @@ namespace ec.edu.monster.CoreBancario.Services
                 await _db.SaveChangesAsync();
 
                 var amortizaciones = new List<Amortizacion>();
+                var dtos = new List<AmortizacionDto>();
+                decimal saldo = monto;
+
                 for (int i = 1; i <= plazoMeses; i++)
                 {
-                    amortizaciones.Add(new Amortizacion
+                    decimal interes = Math.Round(saldo * tasaPeriodo, 2);
+                    decimal capital = Math.Round(cuota - interes, 2);
+                    
+                    if (i == plazoMeses)
+                    {
+                        capital = saldo;
+                        cuota = capital + interes;
+                    }
+
+                    saldo -= capital;
+                    if (saldo < 0) saldo = 0;
+
+                    var amort = new Amortizacion
                     {
                         CreditoCodigo = credito.Codigo,
                         NumeroCuota = i,
                         ValorCuota = cuota,
                         FechaPago = DateTime.Now.AddMonths(i)
+                    };
+                    amortizaciones.Add(amort);
+
+                    dtos.Add(new AmortizacionDto
+                    {
+                        NumeroCuota = amort.NumeroCuota,
+                        ValorCuota = amort.ValorCuota,
+                        InteresPagado = interes,
+                        CapitalPagado = capital,
+                        Saldo = saldo,
+                        FechaPago = amort.FechaPago
                     });
                 }
 
@@ -184,7 +210,8 @@ namespace ec.edu.monster.CoreBancario.Services
                 {
                     Exitoso = true,
                     CreditoCodigo = credito.Codigo,
-                    Mensaje = $"Crédito registrado exitosamente. Código: {credito.Codigo}"
+                    Mensaje = $"Crédito registrado exitosamente. Código: {credito.Codigo}",
+                    Amortizaciones = dtos
                 };
             }
             catch (FaultException)
@@ -197,6 +224,195 @@ namespace ec.edu.monster.CoreBancario.Services
                 await transaction.RollbackAsync();
                 _logger.LogError(ex, "[{Timestamp}] RegistrarCredito - Error", DateTime.Now);
                 throw new FaultException("Error al registrar el crédito.");
+            }
+        }
+        public async Task<CrearClienteResponse> CrearClienteConCuenta(string cedula, string nombre, string apellido, DateTime fechaNacimiento, string genero, decimal depositoInicial)
+        {
+            try
+            {
+                var ts = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
+                _logger.LogInformation("[{Timestamp}] Operation=CrearClienteConCuenta | Cedula={Cedula}", ts, cedula);
+
+                if (await _db.Clientes.AnyAsync(c => c.Cedula == cedula))
+                {
+                    return new CrearClienteResponse { Exitoso = false, Mensaje = "El cliente ya existe en el Banco." };
+                }
+
+                var clienteId = Guid.NewGuid();
+                var cliente = new ClienteBanco
+                {
+                    Id = clienteId,
+                    Cedula = cedula,
+                    Nombre = nombre,
+                    Apellido = apellido,
+                    FechaNacimiento = fechaNacimiento,
+                    Genero = genero,
+                    Estado = "ACTIVO"
+                };
+
+                var cuenta = new Cuenta
+                {
+                    Numero = DateTime.Now.Ticks.ToString().Substring(0, 10),
+                    Tipo = "AHORROS",
+                    Saldo = depositoInicial,
+                    ClienteId = clienteId,
+                    Movimientos = new List<Movimiento>()
+                };
+
+                if (depositoInicial > 0)
+                {
+                    cuenta.Movimientos.Add(new Movimiento
+                    {
+                        Tipo = "DEPOSITO",
+                        Monto = depositoInicial,
+                        Fecha = DateTime.Now.AddDays(-15) // Hace 15 días para dar crédito
+                    });
+                }
+
+                cliente.Cuentas.Add(cuenta);
+                _db.Clientes.Add(cliente);
+                await _db.SaveChangesAsync();
+
+                _logger.LogInformation("[{Timestamp}] CrearClienteConCuenta=Success | Cedula={Cedula}", ts, cedula);
+                return new CrearClienteResponse { Exitoso = true, Mensaje = "Cliente bancario creado exitosamente." };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error en CrearClienteConCuenta para {Cedula}", cedula);
+                return new CrearClienteResponse { Exitoso = false, Mensaje = $"Error interno: {ex.Message}" };
+            }
+        }
+
+        public async Task<ListarClientesResponse> ListarClientes()
+        {
+            try
+            {
+                _logger.LogInformation("[{Timestamp}] Operation=ListarClientes", DateTime.Now);
+
+                var clientes = await _db.Clientes
+                    .Select(c => new ClienteBancoDto
+                    {
+                        Cedula = c.Cedula,
+                        Nombre = c.Nombre,
+                        Apellido = c.Apellido,
+                        FechaNacimiento = c.FechaNacimiento,
+                        Genero = c.Genero,
+                        Estado = c.Estado
+                    })
+                    .ToListAsync();
+
+                return new ListarClientesResponse
+                {
+                    Exitoso = true,
+                    Mensaje = "Lista de clientes obtenida exitosamente.",
+                    Clientes = clientes
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error en ListarClientes");
+                return new ListarClientesResponse { Exitoso = false, Mensaje = $"Error interno: {ex.Message}" };
+            }
+        }
+
+        public async Task<ActualizarClienteResponse> ActualizarCliente(ClienteBancoDto clienteDto)
+        {
+            try
+            {
+                _logger.LogInformation("[{Timestamp}] Operation=ActualizarCliente | Cedula={Cedula}", DateTime.Now, clienteDto.Cedula);
+
+                var cliente = await _db.Clientes.FirstOrDefaultAsync(c => c.Cedula == clienteDto.Cedula);
+                if (cliente == null)
+                {
+                    return new ActualizarClienteResponse { Exitoso = false, Mensaje = "Cliente no encontrado." };
+                }
+
+                cliente.Nombre = clienteDto.Nombre;
+                cliente.Apellido = clienteDto.Apellido;
+                cliente.FechaNacimiento = clienteDto.FechaNacimiento;
+                cliente.Genero = clienteDto.Genero;
+                cliente.Estado = string.IsNullOrWhiteSpace(clienteDto.Estado) ? cliente.Estado : clienteDto.Estado;
+
+                await _db.SaveChangesAsync();
+
+                return new ActualizarClienteResponse { Exitoso = true, Mensaje = "Cliente actualizado exitosamente." };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error en ActualizarCliente para {Cedula}", clienteDto.Cedula);
+                return new ActualizarClienteResponse { Exitoso = false, Mensaje = $"Error interno: {ex.Message}" };
+            }
+        }
+
+        public async Task<EliminarClienteResponse> EliminarCliente(string cedula)
+        {
+            try
+            {
+                _logger.LogInformation("[{Timestamp}] Operation=EliminarCliente | Cedula={Cedula}", DateTime.Now, cedula);
+
+                var cliente = await _db.Clientes
+                    .Include(c => c.Cuentas)
+                        .ThenInclude(cu => cu.Movimientos)
+                    .Include(c => c.Creditos)
+                        .ThenInclude(cr => cr.Amortizaciones)
+                    .FirstOrDefaultAsync(c => c.Cedula == cedula);
+
+                if (cliente == null)
+                {
+                    return new EliminarClienteResponse { Exitoso = false, Mensaje = "Cliente no encontrado." };
+                }
+
+                // Entity Framework Core eliminará en cascada si está configurado, o bien podemos remover manualmente si ya lo cargamos
+                _db.Clientes.Remove(cliente);
+                await _db.SaveChangesAsync();
+
+                return new EliminarClienteResponse { Exitoso = true, Mensaje = "Cliente eliminado exitosamente." };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error en EliminarCliente para {Cedula}", cedula);
+                return new EliminarClienteResponse { Exitoso = false, Mensaje = $"Error al eliminar: {ex.Message}" };
+            }
+        }
+
+        public async Task<ClienteDetalleResponse> ObtenerClienteDetalle(string cedula)
+        {
+            try
+            {
+                _logger.LogInformation("[{Timestamp}] Operation=ObtenerClienteDetalle | Cedula={Cedula}", DateTime.Now, cedula);
+
+                var cliente = await _db.Clientes
+                    .Include(c => c.Cuentas)
+                    .Include(c => c.Creditos)
+                    .FirstOrDefaultAsync(c => c.Cedula == cedula);
+
+                if (cliente == null)
+                {
+                    return new ClienteDetalleResponse { Exitoso = false, Mensaje = "Cliente no encontrado." };
+                }
+
+                decimal saldoAhorros = cliente.Cuentas.Sum(c => c.Saldo);
+
+                var creditosDto = cliente.Creditos.Select(cr => new CreditoDetalleDto
+                {
+                    Monto = cr.Monto,
+                    PlazoMeses = cr.PlazoMeses,
+                    FechaAprobacion = cr.FechaAprobacion,
+                    Estado = cr.Estado
+                }).ToList();
+
+                return new ClienteDetalleResponse
+                {
+                    Exitoso = true,
+                    Mensaje = "Detalle obtenido exitosamente.",
+                    SaldoAhorros = saldoAhorros,
+                    Creditos = creditosDto
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error en ObtenerClienteDetalle para {Cedula}", cedula);
+                return new ClienteDetalleResponse { Exitoso = false, Mensaje = $"Error interno: {ex.Message}" };
             }
         }
     }

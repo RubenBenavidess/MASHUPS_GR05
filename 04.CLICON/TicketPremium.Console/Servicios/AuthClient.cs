@@ -7,24 +7,24 @@ namespace TicketPremium.Console.Servicios
     public class AuthClient
     {
         private static readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(30) };
-        private const string AuthEndpoint = "http://localhost:9099/AuthService.svc";
+        private static readonly string AuthEndpoint = WcfHelper.UrlBase + "/AuthService.svc";
         private const string SoapNS = "http://schemas.xmlsoap.org/soap/envelope/";
         private const string TemNS = "http://tempuri.org/";
         private const string DataNS = "http://schemas.datacontract.org/2004/07/ec.edu.monster.TicketPremium.Contracts";
 
-        public async Task<(bool Exitoso, string Token, string Nombre, string Rol, string Mensaje)> LoginAsync(string cedula, string password)
+        public async Task<(bool Exitoso, string Token, string Nombre, string Rol, string Mensaje, string Cedula)> LoginAsync(string email, string password)
         {
             var body = $@"
                 <Login xmlns=""{TemNS}"">
                     <request xmlns:d4p1=""{DataNS}"" xmlns:i=""http://www.w3.org/2001/XMLSchema-instance"">
-                        <d4p1:Cedula>{Escape(cedula)}</d4p1:Cedula>
+                        <d4p1:Email>{Escape(email)}</d4p1:Email>
                         <d4p1:Password>{Escape(password)}</d4p1:Password>
                     </request>
                 </Login>";
 
             var responseXml = await SendAsync("Login", body);
 
-            var loginResult = responseXml.Descendants(XName.Get("LoginResult", DataNS)).FirstOrDefault()
+            var loginResult = responseXml.Descendants(XName.Get("LoginResult", TemNS)).FirstOrDefault()
                            ?? responseXml.Descendants(XName.Get("LoginResponse", TemNS)).FirstOrDefault();
 
             if (loginResult == null)
@@ -33,9 +33,9 @@ namespace TicketPremium.Console.Servicios
                 if (fault != null)
                 {
                     var reason = fault.Descendants(XName.Get("Text", SoapNS)).FirstOrDefault()?.Value ?? "Error desconocido";
-                    return (false, "", "", "", reason);
+                    return (false, "", "", "", reason, "");
                 }
-                return (false, "", "", "", "Respuesta invalida del servidor.");
+                return (false, "", "", "", "Respuesta invalida del servidor.", "");
             }
 
             return (
@@ -43,11 +43,12 @@ namespace TicketPremium.Console.Servicios
                 loginResult.Element(XName.Get("SessionToken", DataNS))?.Value ?? "",
                 loginResult.Element(XName.Get("Nombre", DataNS))?.Value ?? "",
                 loginResult.Element(XName.Get("Rol", DataNS))?.Value ?? "",
-                loginResult.Element(XName.Get("Mensaje", DataNS))?.Value ?? ""
+                loginResult.Element(XName.Get("Mensaje", DataNS))?.Value ?? "",
+                loginResult.Element(XName.Get("Cedula", DataNS))?.Value ?? ""
             );
         }
 
-        public async Task<(bool Exitoso, string Token, string Nombre, string Rol, string Mensaje)> RegistroAsync(
+        public async Task<(bool Exitoso, string Token, string Nombre, string Rol, string Mensaje, string Cedula)> RegistroAsync(
             string cedula, string nombre, string apellido, string email, string telefono, string genero, DateTime fechaNac, string password)
         {
             var fecha = fechaNac.ToString("o");
@@ -67,7 +68,7 @@ namespace TicketPremium.Console.Servicios
 
             var responseXml = await SendAsync("Registro", body);
 
-            var result = responseXml.Descendants(XName.Get("RegistroResult", DataNS)).FirstOrDefault()
+            var result = responseXml.Descendants(XName.Get("RegistroResult", TemNS)).FirstOrDefault()
                       ?? responseXml.Descendants(XName.Get("RegistroResponse", TemNS)).FirstOrDefault();
 
             if (result == null)
@@ -76,9 +77,9 @@ namespace TicketPremium.Console.Servicios
                 if (fault != null)
                 {
                     var reason = fault.Descendants(XName.Get("Text", SoapNS)).FirstOrDefault()?.Value ?? "Error desconocido";
-                    return (false, "", "", "", reason);
+                    return (false, "", "", "", reason, "");
                 }
-                return (false, "", "", "", "Respuesta invalida del servidor.");
+                return (false, "", "", "", "Respuesta invalida del servidor.", "");
             }
 
             return (
@@ -86,7 +87,8 @@ namespace TicketPremium.Console.Servicios
                 result.Element(XName.Get("SessionToken", DataNS))?.Value ?? "",
                 result.Element(XName.Get("Nombre", DataNS))?.Value ?? "",
                 result.Element(XName.Get("Rol", DataNS))?.Value ?? "",
-                result.Element(XName.Get("Mensaje", DataNS))?.Value ?? ""
+                result.Element(XName.Get("Mensaje", DataNS))?.Value ?? "",
+                result.Element(XName.Get("Cedula", DataNS))?.Value ?? ""
             );
         }
 
@@ -99,7 +101,7 @@ namespace TicketPremium.Console.Servicios
 
             var responseXml = await SendAsync("ValidarToken", body);
 
-            var result = responseXml.Descendants(XName.Get("ValidarTokenResult", DataNS)).FirstOrDefault()
+            var result = responseXml.Descendants(XName.Get("ValidarTokenResult", TemNS)).FirstOrDefault()
                       ?? responseXml.Descendants(XName.Get("ValidarTokenResponse", TemNS)).FirstOrDefault();
 
             if (result == null) return (false, "", "", "Respuesta invalida del servidor.");
@@ -134,3 +136,5 @@ namespace TicketPremium.Console.Servicios
         private static string Escape(string s) => s.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;");
     }
 }
+
+

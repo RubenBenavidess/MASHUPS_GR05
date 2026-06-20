@@ -20,6 +20,12 @@ public class FacturaService : IFacturaService
         var ts = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
         _logger.LogInformation("[{T}] Operation=CalcularFactura | codigos={C}, efectivo={E}, cedula={CL}", ts, string.Join(",", codigosAsiento), esEfectivo, clienteCedula);
 
+        var clienteExiste = await _db.Clientes.AnyAsync(c => c.Cedula == clienteCedula);
+        if (!clienteExiste)
+        {
+            throw new FaultException(new FaultReason($"El cliente con cedula {clienteCedula} no esta registrado en el sistema. Debe registrarse primero."), new FaultCode("ClienteNoEncontrado"));
+        }
+
         var asientos = await _db.Asientos.Where(a => codigosAsiento.Contains(a.Codigo)).Include(a => a.Localidad).Include(a => a.Partido).ToListAsync();
 
         if (asientos.Count != codigosAsiento.Count)

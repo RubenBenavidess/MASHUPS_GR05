@@ -1,4 +1,6 @@
 using TicketPremium.Console.Modelos;
+using AsientoService;
+using LocalidadService;
 
 namespace TicketPremium.Console.Servicios
 {
@@ -18,21 +20,55 @@ namespace TicketPremium.Console.Servicios
             ? StadiumSeats.FirstOrDefault(s => s.LocalidadCodigo == LocalidadActivaCodigo)?.LocalidadDescripcion ?? ""
             : "";
 
-        public void CargarAsientosPorPartido(string partidoId)
+        public async Task CargarAsientosPorPartidoAsync(string partidoId, string equipoLocal, string equipoVisitante, DateTime fecha, string estadioNombre, string estadioCodigo)
         {
             PartidoActualId = partidoId;
             LocalidadActivaCodigo = null;
             StadiumSeats.Clear();
 
-            var partidoData = ObtenerDatosPartido(partidoId);
-            PartidoLocal = partidoData.Local;
-            PartidoVisitante = partidoData.Visitante;
-            PartidoFecha = partidoData.Fecha;
-            EstadioNombre = partidoData.Estadio;
-            EstadioCodigo = partidoData.EstadioCodigo;
+            PartidoLocal = equipoLocal;
+            PartidoVisitante = equipoVisitante;
+            PartidoFecha = fecha;
+            EstadioNombre = estadioNombre;
+            EstadioCodigo = estadioCodigo;
 
-            var asientos = GenerarAsientos(partidoId, partidoData);
-            StadiumSeats.AddRange(asientos);
+            try 
+            {
+                var asientoClient = WcfHelper.CreateAsientoServiceClient();
+                asientoClient.Endpoint.EndpointBehaviors.Add(new SessionTokenInspector(() => Program.SessionToken));
+                
+                var localidadClient = WcfHelper.CreateLocalidadServiceClient();
+                localidadClient.Endpoint.EndpointBehaviors.Add(new SessionTokenInspector(() => Program.SessionToken));
+
+                var realSeats = await asientoClient.ListarAsientosPorPartidoAsync(Program.SessionToken, partidoId);
+                var localidades = await localidadClient.ListarLocalidadesAsync();
+
+                foreach(var a in realSeats) 
+                {
+                    var loc = localidades.FirstOrDefault(l => l.Codigo == a.LocalidadCodigo);
+                    var status = a.Estado;
+                    if (status?.ToUpper() == "DISPONIBLE" || status?.ToUpper() == "LIBRE") status = "Disponible";
+                    else if (status?.ToUpper() == "OCUPADO" || status?.ToUpper() == "VENDIDO") status = "Ocupado";
+                    else if (status?.ToUpper() == "RESERVADO") status = "Reservado";
+
+                    StadiumSeats.Add(new Seat {
+                        Id = a.Codigo,
+                        Fila = a.Fila,
+                        Numero = a.Numero,
+                        Status = status ?? "Disponible",
+                        LocalidadCodigo = a.LocalidadCodigo,
+                        LocalidadDescripcion = loc?.Descripcion ?? a.LocalidadCodigo,
+                        PartidoCodigo = a.PartidoCodigo,
+                        EstadioCodigo = EstadioCodigo,
+                        Price = loc?.PrecioBase ?? 0m,
+                    });
+                }
+            } 
+            catch 
+            {
+                var asientos = GenerarAsientos(partidoId, (PartidoLocal, PartidoVisitante, PartidoFecha, EstadioNombre, EstadioCodigo));
+                StadiumSeats.AddRange(asientos);
+            }
 
             SincronizarCarrito();
         }
@@ -111,6 +147,14 @@ namespace TicketPremium.Console.Servicios
             return false;
         }
 
+        public bool ToggleSeatByFilaYNumero(string fila, int numero)
+        {
+            var seats = GetAsientosDeLocalidadActiva();
+            var seat = seats.FirstOrDefault(s => s.Fila.Equals(fila, StringComparison.OrdinalIgnoreCase) && s.Numero == numero);
+            if (seat == null) return false;
+            return ToggleSeat(seat.Id);
+        }
+
         public bool ToggleSeatByNumero(int numero)
         {
             var seats = GetAsientosDeLocalidadActiva();
@@ -127,16 +171,7 @@ namespace TicketPremium.Console.Servicios
         public decimal GetTotal() => Cart.Sum(s => s.Price);
         public string[] GetCodigosAsientos() => Cart.Select(s => s.Id).ToArray();
 
-        private static (string Local, string Visitante, DateTime Fecha, string Estadio, string EstadioCodigo) ObtenerDatosPartido(string codigo)
-        {
-            return codigo switch
-            {
-                "PAR-001" => ("México", "Estados Unidos", new DateTime(2026, 6, 11, 20, 0, 0), "Estadio Azteca", "EST-001"),
-                "PAR-002" => ("Argentina", "Brasil", new DateTime(2026, 6, 18, 20, 0, 0), "MetLife Stadium", "EST-002"),
-                "PAR-003" => ("Francia", "Inglaterra", new DateTime(2026, 7, 5, 20, 0, 0), "SoFi Stadium", "EST-003"),
-                _ => ("Equipo A", "Equipo B", DateTime.UtcNow, "Estadio Genérico", "EST-000"),
-            };
-        }
+
 
         private static List<Seat> GenerarAsientos(string partidoCodigo, (string, string, DateTime, string, string) data)
         {
@@ -200,3 +235,4 @@ namespace TicketPremium.Console.Servicios
         }
     }
 }
+

@@ -34,7 +34,7 @@ public class CompraService : ICompraService
                 if (!exitoso)
                 {
                     foreach (var r in reservados) await _fifaClient.LiberarAsientoAsync(r);
-                    throw new FaultException(new FaultReason($"ASIENTO_NO_DISPONIBLE: {codigoAsiento}"), new FaultCode("ReservaFallida"));
+                    throw new FaultException(new FaultReason($"El asiento {codigoAsiento} ya no se encuentra disponible. Por favor, seleccione otro."), new FaultCode("ReservaFallida"));
                 }
                 reservados.Add(codigoAsiento);
             }
@@ -47,7 +47,7 @@ public class CompraService : ICompraService
                 if (!exitoso)
                 {
                     foreach (var r in reservados) await _fifaClient.LiberarAsientoAsync(r);
-                    throw new FaultException(new FaultReason($"ERROR_CONFIRMACION_VENTA: {codigoAsiento}"), new FaultCode("ConfirmacionFallida"));
+                    throw new FaultException(new FaultReason($"Hubo un problema al confirmar la venta del asiento {codigoAsiento}. Por favor, intente de nuevo."), new FaultCode("ConfirmacionFallida"));
                 }
             }
 
@@ -65,7 +65,7 @@ public class CompraService : ICompraService
         catch (Exception ex)
         {
             _logger.LogError(ex, "[{T}] ComprarEnEfectivo=Error", ts);
-            throw new FaultException(new FaultReason("Error inesperado en la compra en efectivo"), new FaultCode("ErrorInterno"));
+            throw new FaultException(new FaultReason("Error inesperado en la compra en efectivo. Por favor, intente más tarde."), new FaultCode("ErrorInterno"));
         }
     }
 
@@ -84,7 +84,7 @@ public class CompraService : ICompraService
                 if (!exitoso)
                 {
                     foreach (var r in reservados) await _fifaClient.LiberarAsientoAsync(r);
-                    throw new FaultException(new FaultReason($"ASIENTO_NO_DISPONIBLE: {codigoAsiento}"), new FaultCode("ReservaFallida"));
+                    throw new FaultException(new FaultReason($"El asiento {codigoAsiento} ya no se encuentra disponible. Por favor, seleccione otro."), new FaultCode("ReservaFallida"));
                 }
                 reservados.Add(codigoAsiento);
             }
@@ -93,14 +93,14 @@ public class CompraService : ICompraService
             if (!verificacion.Aprobado)
             {
                 foreach (var r in reservados) await _fifaClient.LiberarAsientoAsync(r);
-                throw new FaultException(new FaultReason($"CREDITO_DENEGADO: {verificacion.Mensaje}"), new FaultCode("CreditoDenegado"));
+                throw new FaultException(new FaultReason($"No se puede procesar la compra a crédito: {verificacion.Mensaje}"), new FaultCode("CreditoDenegado"));
             }
 
             var montoMax = await _bancoClient.ObtenerMontoMaximoAsync(clienteCedula);
             if (!montoMax.Exitoso)
             {
                 foreach (var r in reservados) await _fifaClient.LiberarAsientoAsync(r);
-                throw new FaultException(new FaultReason($"ERROR_MONTO_MAXIMO: {montoMax.Mensaje}"), new FaultCode("MontoMaximoError"));
+                throw new FaultException(new FaultReason($"No se pudo obtener el límite de su crédito: {montoMax.Mensaje}"), new FaultCode("MontoMaximoError"));
             }
 
             var facturaResponse = await _facturaService.CalcularFactura(sessionToken, codigosAsiento, false, clienteCedula);
@@ -108,7 +108,14 @@ public class CompraService : ICompraService
             if (facturaResponse.Total > montoMax.MontoMaximo)
             {
                 foreach (var r in reservados) await _fifaClient.LiberarAsientoAsync(r);
-                throw new FaultException(new FaultReason($"MONTO_EXCEDIDO: Total ${facturaResponse.Total} > Max ${montoMax.MontoMaximo}"), new FaultCode("MontoExcedido"));
+                throw new FaultException(new FaultReason($"El total de su compra (${facturaResponse.Total}) excede su límite de crédito disponible (${montoMax.MontoMaximo})."), new FaultCode("MontoExcedido"));
+            }
+
+            var registroCredito = await _bancoClient.RegistrarCreditoAsync(clienteCedula, facturaResponse.Total, plazoMeses);
+            if (!registroCredito.Exitoso)
+            {
+                foreach (var r in reservados) await _fifaClient.LiberarAsientoAsync(r);
+                throw new FaultException(new FaultReason($"Ocurrió un problema al registrar su crédito: {registroCredito.Mensaje}"), new FaultCode("RegistroCreditoError"));
             }
 
             foreach (var codigoAsiento in codigosAsiento)
@@ -116,16 +123,8 @@ public class CompraService : ICompraService
                 var (exitoso, mensaje) = await _fifaClient.ConfirmarVentaAsync(codigoAsiento);
                 if (!exitoso)
                 {
-                    foreach (var r in reservados) await _fifaClient.LiberarAsientoAsync(r);
-                    throw new FaultException(new FaultReason($"ERROR_CONFIRMACION_VENTA: {codigoAsiento}"), new FaultCode("ConfirmacionFallida"));
+                    throw new FaultException(new FaultReason($"Hubo un problema al confirmar la venta del asiento {codigoAsiento}. Por favor, intente de nuevo."), new FaultCode("ConfirmacionFallida"));
                 }
-            }
-
-            var registroCredito = await _bancoClient.RegistrarCreditoAsync(clienteCedula, facturaResponse.Total, plazoMeses);
-            if (!registroCredito.Exitoso)
-            {
-                foreach (var r in reservados) await _fifaClient.LiberarAsientoAsync(r);
-                throw new FaultException(new FaultReason($"ERROR_REGISTRO_CREDITO: {registroCredito.Mensaje}"), new FaultCode("RegistroCreditoError"));
             }
 
             foreach (var codigoAsiento in codigosAsiento)
@@ -135,8 +134,24 @@ public class CompraService : ICompraService
             }
             await _db.SaveChangesAsync();
 
+            var dtos = registroCredito.Amortizaciones.Select(a => new ec.edu.monster.TicketPremium.Contracts.AmortizacionDto
+            {
+                NumeroCuota = a.NumeroCuota,
+                ValorCuota = a.ValorCuota,
+                InteresPagado = a.InteresPagado,
+                CapitalPagado = a.CapitalPagado,
+                Saldo = a.Saldo,
+                FechaPago = a.FechaPago
+            }).ToList();
+
             _logger.LogInformation("[{T}] ComprarACredito=OK | Credito={C}", ts, registroCredito.CreditoCodigo);
-            return new CompraResponse { Exitoso = true, NumeroFactura = facturaResponse.Numero, Mensaje = "Compra a credito exitosa. Credito #" + registroCredito.CreditoCodigo };
+            return new CompraResponse 
+            { 
+                Exitoso = true, 
+                NumeroFactura = facturaResponse.Numero, 
+                Mensaje = "Compra a credito exitosa. Credito #" + registroCredito.CreditoCodigo,
+                Amortizaciones = dtos
+            };
         }
         catch (FaultException) { throw; }
         catch (Exception ex)

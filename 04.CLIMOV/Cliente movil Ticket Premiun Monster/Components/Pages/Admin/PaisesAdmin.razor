@@ -1,0 +1,117 @@
+@page "/admin/paises"
+@using ec.edu.monster.TicketClient.State
+@inject AuthState AuthState
+@using PaisService
+@inject PaisServiceClient PaisService
+
+<h3 style="text-transform: uppercase;">Administración de Países</h3>
+<p style="color: rgba(245,240,232,0.6); font-size: 0.9rem;">
+    Esta pantalla permite gestionar los países registrados en el sistema.
+</p>
+
+<!-- Tabs -->
+<ul class="nav nav-tabs" style="margin-top: 1.5rem; border-bottom: 2px solid var(--color-gold);">
+    <li class="nav-item">
+        <a class="nav-link @(activeTab == "listar" ? "active" : "")" style="cursor: pointer; background-color: @(activeTab == "listar" ? "var(--color-gold)" : "transparent"); color: @(activeTab == "listar" ? "black" : "white"); font-weight: bold;" @onclick='() => SetActiveTab("listar")'>Ver Países</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link @(activeTab == "registrar" ? "active" : "")" style="cursor: pointer; background-color: @(activeTab == "registrar" ? "var(--color-gold)" : "transparent"); color: @(activeTab == "registrar" ? "black" : "white"); font-weight: bold;" @onclick='() => SetActiveTab("registrar")'>Registrar País</a>
+    </li>
+</ul>
+
+<div class="card" style="margin-top: 1.5rem;">
+    <div class="card-body">
+        @if (activeTab == "listar")
+        {
+            <h4>Países Registrados</h4>
+            @if (paises == null)
+            {
+                <p><em>Cargando...</em></p>
+            }
+            else
+            {
+                <table class="table table-dark table-hover" style="margin-top: 1rem;">
+                    <thead>
+                        <tr>
+                            <th style="color: var(--color-gold);">Código</th>
+                            <th style="color: var(--color-gold);">Nombre</th>
+                            <th style="color: var(--color-gold);">Continente</th>
+                            <th style="color: var(--color-gold); text-align: center;">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var pais in paises)
+                        {
+                            <tr>
+                                <td>@pais.Codigo</td>
+                                <td>@pais.Nombre</td>
+                                <td>@pais.Continente</td>
+                                <td style="text-align: center; display: flex; gap: 0.5rem; justify-content: center;">
+                                    <button class="btn btn-sm btn-danger" @onclick="() => EliminarPais(pais.Codigo)" title="Eliminar País">🗑️</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        }
+        else if (activeTab == "registrar")
+        {
+            <h4>Crear Nuevo País</h4>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; margin-top: 1rem;">
+                <div class="form-group">
+                    <label style="display: block; font-size: 0.85rem; color: rgba(245,240,232,0.6); margin-bottom: 0.4rem;">Código:</label>
+                    <input @bind="nuevoPais.Codigo" class="form-control" placeholder="Ej. ECU" />
+                </div>
+                <div class="form-group">
+                    <label style="display: block; font-size: 0.85rem; color: rgba(245,240,232,0.6); margin-bottom: 0.4rem;">Nombre:</label>
+                    <input @bind="nuevoPais.Nombre" class="form-control" placeholder="Ej. Ecuador" />
+                </div>
+            </div>
+            <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label style="display: block; font-size: 0.85rem; color: rgba(245,240,232,0.6); margin-bottom: 0.4rem;">Continente:</label>
+                <input @bind="nuevoPais.Continente" class="form-control" placeholder="Ej. América del Sur" />
+            </div>
+            
+            <button class="btn btn-primary" @onclick="CrearPais" style="width: 100%; padding: 0.8rem; font-weight: bold;">
+                Registrar País
+            </button>
+        }
+    </div>
+</div>
+
+@code {
+    private string activeTab = "listar";
+    private List<PaisDto> paises;
+    private PaisDto nuevoPais = new PaisDto();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarPaises();
+    }
+
+    private void SetActiveTab(string tab)
+    {
+        activeTab = tab;
+    }
+
+    private async Task CargarPaises()
+    {
+        var result = await PaisService.ListarPaisesAsync(AuthState.Token);
+        paises = result.ToList();
+    }
+
+    private async Task CrearPais()
+    {
+        await PaisService.CrearPaisAsync(AuthState.Token, nuevoPais);
+        nuevoPais = new PaisDto();
+        await CargarPaises();
+        SetActiveTab("listar");
+    }
+
+    private async Task EliminarPais(string codigo)
+    {
+        await PaisService.EliminarPaisAsync(AuthState.Token, codigo);
+        await CargarPaises();
+    }
+}

@@ -2,6 +2,7 @@ using TicketPremium.Console.Modelos;
 using TicketPremium.Console.Servicios;
 using PartidoService;
 using CompraService;
+using ReporteService;
 
 namespace TicketPremium.Console
 {
@@ -11,11 +12,13 @@ namespace TicketPremium.Console
         private static readonly CrudMenuService _crudService = new();
         private static readonly AuthClient _authClient = new();
         private static PartidoServiceClient? _partidoClient;
+
         private static CompraServiceClient? _compraClient;
         private static List<PartidoDto> _partidosCache = new();
-        private static string? _sessionToken;
+        public static string? SessionToken;
         private static string? _sessionRol;
         private static string? _sessionNombre;
+        private static string? _sessionCedula;
 
         static async Task Main(string[] args)
         {
@@ -24,13 +27,10 @@ namespace TicketPremium.Console
 
             try
             {
-                _partidoClient = new PartidoServiceClient();
-                _compraClient = new CompraServiceClient();
+                _partidoClient = WcfHelper.CreatePartidoServiceClient();
+                _compraClient = WcfHelper.CreateCompraServiceClient();
             }
-            catch
-            {
-            }
-
+            catch { }
             while (true)
             {
                 var exit = await MostrarMenuPrincipal();
@@ -46,56 +46,127 @@ namespace TicketPremium.Console
         {
             ConsoleUI.MostrarEncabezado();
             ConsoleUI.EscribirLinea("  MENU PRINCIPAL", ConsoleColor.Yellow);
-            if (_sessionToken != null)
+            if (SessionToken != null)
             {
                 ConsoleUI.Escribir($"  Sesion: {_sessionNombre}  |  Rol: ", ConsoleColor.DarkGray);
                 ConsoleUI.EscribirLinea(_sessionRol ?? "", _sessionRol == "ADMIN" ? ConsoleColor.Cyan : ConsoleColor.Green);
+                System.Console.WriteLine();
+                ConsoleUI.EscribirLinea("  [1] Inicio (Ver Partidos)", ConsoleColor.White);
+                ConsoleUI.EscribirLinea("  [2] Mis compras", ConsoleColor.White);
+                ConsoleUI.EscribirLinea("  [3] Carrito", ConsoleColor.White);
+                
+                if (_sessionRol == "ADMIN")
+                {
+                    ConsoleUI.EscribirLinea("  [4] Administración", ConsoleColor.White);
+                    ConsoleUI.EscribirLinea("  [5] Cerrar Sesion", ConsoleColor.White);
+                    ConsoleUI.EscribirLinea("  [6] Salir", ConsoleColor.White);
+                }
+                else 
+                {
+                    ConsoleUI.EscribirLinea("  [4] Cerrar Sesion", ConsoleColor.White);
+                    ConsoleUI.EscribirLinea("  [5] Salir", ConsoleColor.White);
+                }
             }
             else
             {
                 ConsoleUI.EscribirLinea("  No has iniciado sesion.", ConsoleColor.DarkGray);
+                System.Console.WriteLine();
+                ConsoleUI.EscribirLinea("  [1] Inicio (Ver Partidos)", ConsoleColor.White);
+                ConsoleUI.EscribirLinea("  [2] Iniciar Sesion / Registrarse", ConsoleColor.White);
+                ConsoleUI.EscribirLinea("  [3] Salir", ConsoleColor.White);
             }
-            System.Console.WriteLine();
-            ConsoleUI.EscribirLinea("  [1] Ver Partidos y Comprar Boletos", ConsoleColor.White);
-            ConsoleUI.EscribirLinea("  [2] Administracion (CRUD) - Requiere Admin", ConsoleColor.White);
-            ConsoleUI.EscribirLinea("  [3] Reportes - Requiere Admin", ConsoleColor.White);
-            ConsoleUI.EscribirLinea("  [4] Ver Carrito de Compras", ConsoleColor.White);
-            ConsoleUI.EscribirLinea("  [5] Iniciar Sesion / Registrarse", ConsoleColor.White);
-            ConsoleUI.EscribirLinea("  [6] Cerrar Sesion", _sessionToken != null ? ConsoleColor.White : ConsoleColor.DarkGray);
-            ConsoleUI.EscribirLinea("  [7] Salir", ConsoleColor.White);
+            
             System.Console.WriteLine();
 
             if (!_crudService.BackendDisponible)
-                ConsoleUI.EscribirLinea("  [!] Backend no detectado. CRUD y Reportes requieren los servicios SOAP activos.", ConsoleColor.DarkYellow);
+                ConsoleUI.EscribirLinea("  [!] Backend no detectado. Algunas opciones no funcionarán.", ConsoleColor.DarkYellow);
 
-            var opcion = ConsoleUI.LeerOpcion(1, 7);
+            int opcion;
+            if (SessionToken == null) opcion = ConsoleUI.LeerOpcion(1, 3);
+            else if (_sessionRol == "ADMIN") opcion = ConsoleUI.LeerOpcion(1, 6);
+            else opcion = ConsoleUI.LeerOpcion(1, 5);
 
-            switch (opcion)
+            if (SessionToken == null)
             {
-                case 1:
-                    await MostrarPartidos();
-                    return false;
-                case 2:
-                    await MenuAdministracion();
-                    return false;
-                case 3:
-                    if (!RequerirAdmin()) return false;
-                    await _crudService.MenuReportes();
-                    return false;
-                case 4:
-                    MostrarCarrito();
-                    return false;
-                case 5:
-                    await IniciarSesion();
-                    return false;
-                case 6:
-                    CerrarSesion();
-                    return false;
-                case 7:
-                    return true;
-                default:
-                    return false;
+                switch (opcion)
+                {
+                    case 1: await MostrarPartidos(); return false;
+                    case 2: await IniciarSesion(); return false;
+                    case 3: return true;
+                }
             }
+            else if (_sessionRol == "ADMIN")
+            {
+                switch (opcion)
+                {
+                    case 1: await MostrarPartidos(); return false;
+                    case 2: await VerMisCompras(); return false;
+                    case 3: MostrarCarrito(); return false;
+                    case 4: await MenuAdministracion(); return false;
+                    case 5: CerrarSesion(); return false;
+                    case 6: return true;
+                }
+            }
+            else 
+            {
+                switch (opcion)
+                {
+                    case 1: await MostrarPartidos(); return false;
+                    case 2: await VerMisCompras(); return false;
+                    case 3: MostrarCarrito(); return false;
+                    case 4: CerrarSesion(); return false;
+                    case 5: return true;
+                }
+            }
+
+            return false;
+        }
+
+        static async Task VerMisCompras()
+        {
+            if (!RequerirLogin()) return;
+
+            ConsoleUI.MostrarEncabezado();
+            ConsoleUI.EscribirLinea("  MIS COMPRAS", ConsoleColor.Yellow);
+            System.Console.WriteLine();
+
+            try
+            {
+                var reporteClient = WcfHelper.CreateReporteServiceClient();
+                var compras = await reporteClient.ResumenVentasPorClienteAsync(SessionToken, _sessionCedula);
+
+                if (compras == null || compras.Length == 0)
+                {
+                    ConsoleUI.EscribirLinea("  No tienes compras registradas.", ConsoleColor.DarkGray);
+                }
+                else
+                {
+                    var facturas = compras.GroupBy(c => c.NumeroFactura).OrderByDescending(g => g.Max(c => c.Fecha));
+                    foreach (var f in facturas)
+                    {
+                        var fecha = f.Max(c => c.Fecha).ToString("dd/MMM/yyyy HH:mm");
+                        var total = f.Sum(c => c.PrecioUnitario);
+                        ConsoleUI.EscribirLinea($"  [Factura: {f.Key}]  —  {fecha}  —  Total: ${total:F2}", ConsoleColor.Cyan);
+                        ConsoleUI.EscribirLinea($"  Metodo de pago: {f.First().MetodoPago}", ConsoleColor.DarkGray);
+                        System.Console.WriteLine();
+
+                        foreach (var item in f)
+                        {
+                            ConsoleUI.EscribirLinea($"    · Partido: {item.Partido}", ConsoleColor.White);
+                            ConsoleUI.EscribirLinea($"      Asiento: {item.Asiento} ({item.Localidad})  |  Precio: ${item.PrecioUnitario:F2}", ConsoleColor.DarkGray);
+                        }
+                        System.Console.WriteLine();
+                        ConsoleUI.EscribirLinea(new string('-', 60), ConsoleColor.DarkGray);
+                        System.Console.WriteLine();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ConsoleUI.EscribirLinea($"  Ocurrio un error al obtener tus compras: {ex.Message}", ConsoleColor.Red);
+            }
+
+            ConsoleUI.Pausa();
         }
 
         static async Task MenuAdministracion()
@@ -105,24 +176,30 @@ namespace TicketPremium.Console
             while (true)
             {
                 ConsoleUI.MostrarEncabezado();
-                ConsoleUI.EscribirLinea("  ADMINISTRACION (CRUD)", ConsoleColor.Yellow);
+                ConsoleUI.EscribirLinea("  ADMINISTRACIÓN", ConsoleColor.Yellow);
                 System.Console.WriteLine();
-                ConsoleUI.EscribirLinea("  [1] Paises", ConsoleColor.White);
-                ConsoleUI.EscribirLinea("  [2] Partidos", ConsoleColor.White);
+                ConsoleUI.EscribirLinea("  [1] Países", ConsoleColor.White);
+                ConsoleUI.EscribirLinea("  [2] Estadios", ConsoleColor.White);
                 ConsoleUI.EscribirLinea("  [3] Localidades", ConsoleColor.White);
-                ConsoleUI.EscribirLinea("  [4] Clientes", ConsoleColor.White);
+                ConsoleUI.EscribirLinea("  [4] Partidos", ConsoleColor.White);
+                ConsoleUI.EscribirLinea("  [5] Resumen Ventas", ConsoleColor.White);
+                ConsoleUI.EscribirLinea("  [6] Clientes TP", ConsoleColor.White);
+                ConsoleUI.EscribirLinea("  [7] Clientes Banco", ConsoleColor.White);
                 ConsoleUI.EscribirLinea("  [0] Volver", ConsoleColor.DarkGray);
                 System.Console.WriteLine();
 
-                var op = ConsoleUI.LeerOpcion(0, 4);
+                var op = ConsoleUI.LeerOpcion(0, 7);
                 if (op == 0) return;
 
                 switch (op)
                 {
                     case 1: await _crudService.CrudPaises(); break;
-                    case 2: await _crudService.CrudPartidos(); break;
+                    case 2: await _crudService.CrudEstadios(); break;
                     case 3: await _crudService.CrudLocalidades(); break;
-                    case 4: await _crudService.CrudClientes(); break;
+                    case 4: await _crudService.CrudPartidos(); break;
+                    case 5: await _crudService.MenuReportes(); break;
+                    case 6: await _crudService.CrudClientes(); break;
+                    case 7: await _crudService.CrudClientesBanco(); break;
                 }
             }
         }
@@ -161,12 +238,25 @@ namespace TicketPremium.Console
             if (opcion == 0) return;
 
             var partidoElegido = partidos[opcion - 1];
-            await MostrarLocalidades(partidoElegido.Codigo);
+
+            if (partidoElegido.FechaHora < DateTime.Now)
+            {
+                ConsoleUI.MostrarEncabezado();
+                ConsoleUI.EscribirLinea("  PARTIDO FINALIZADO", ConsoleColor.Red);
+                System.Console.WriteLine();
+                ConsoleUI.EscribirLinea("  Este partido ya se ha jugado y no hay venta de boletos.", ConsoleColor.DarkGray);
+                System.Console.WriteLine();
+                ConsoleUI.Pausa();
+                return;
+            }
+
+            await MostrarLocalidades(partidoElegido);
         }
 
-        static async Task MostrarLocalidades(string codigoPartido)
+        static async Task MostrarLocalidades(PartidoDto partidoElegido)
         {
-            _ticketService.CargarAsientosPorPartido(codigoPartido);
+            var estadioNombre = ObtenerNombreEstadio(partidoElegido.EstadioCodigo);
+            await _ticketService.CargarAsientosPorPartidoAsync(partidoElegido.Codigo, partidoElegido.EquipoLocal, partidoElegido.EquipoVisitante, partidoElegido.FechaHora, estadioNombre, partidoElegido.EstadioCodigo);
 
             while (true)
             {
@@ -260,7 +350,7 @@ namespace TicketPremium.Console
                 {
                     ConsoleUI.EscribirLinea($"  CARRITO: {cartCount} asiento(s) — Total: ${cartTotal:F0}", ConsoleColor.Yellow);
                 }
-                ConsoleUI.EscribirLinea("  Ingrese numero de asiento para seleccionar/deseleccionar", ConsoleColor.DarkGray);
+                ConsoleUI.EscribirLinea("  Ingrese ID de asiento (ej. D9) para seleccionar/deseleccionar", ConsoleColor.DarkGray);
                 ConsoleUI.EscribirLinea("  [P] Pagar  |  [V] Ver carrito  |  [B] Volver a localidades", ConsoleColor.DarkGray);
                 System.Console.WriteLine();
 
@@ -293,18 +383,30 @@ namespace TicketPremium.Console
                     continue;
                 }
 
-                if (int.TryParse(input, out var numero))
+                var match = System.Text.RegularExpressions.Regex.Match(input, @"^([A-Z])(\d+)$");
+                if (match.Success)
                 {
-                    var result = _ticketService.ToggleSeatByNumero(numero);
+                    var fila = match.Groups[1].Value;
+                    var numero = int.Parse(match.Groups[2].Value);
+                    var result = _ticketService.ToggleSeatByFilaYNumero(fila, numero);
                     if (!result)
                     {
-                        ConsoleUI.EscribirLinea($"  El asiento {numero} no esta disponible o no existe.", ConsoleColor.Red);
+                        ConsoleUI.EscribirLinea($"  El asiento {input} no esta disponible o no existe.", ConsoleColor.Red);
+                        ConsoleUI.Pausa();
+                    }
+                }
+                else if (int.TryParse(input, out var numeroSolo))
+                {
+                    var result = _ticketService.ToggleSeatByNumero(numeroSolo);
+                    if (!result)
+                    {
+                        ConsoleUI.EscribirLinea($"  El asiento {numeroSolo} no esta disponible o no existe.", ConsoleColor.Red);
                         ConsoleUI.Pausa();
                     }
                 }
                 else
                 {
-                    ConsoleUI.EscribirLinea("  Entrada no valida.", ConsoleColor.Red);
+                    ConsoleUI.EscribirLinea("  Entrada no valida. Ingrese Fila y Numero (ej: D9).", ConsoleColor.Red);
                     ConsoleUI.Pausa();
                 }
             }
@@ -312,17 +414,18 @@ namespace TicketPremium.Console
 
         static void DibujarAsiento(Seat seat)
         {
+            var etiqueta = seat.Numero == 0 ? "  " : $"{seat.Fila}{seat.Numero}";
             switch (seat.Status)
             {
                 case "Disponible":
-                    ConsoleUI.Escribir($"[{seat.Numero,2}]", ConsoleColor.Green);
+                    ConsoleUI.Escribir($"[{etiqueta,3}]", ConsoleColor.Green);
                     break;
                 case "Ocupado":
                 case "Reservado":
-                    ConsoleUI.Escribir($"[XX]", ConsoleColor.Red);
+                    ConsoleUI.Escribir($"[ XX]", ConsoleColor.Red);
                     break;
                 case "Seleccionado":
-                    ConsoleUI.Escribir($"[{seat.Numero,2}]", ConsoleColor.Yellow);
+                    ConsoleUI.Escribir($"[{etiqueta,3}]", ConsoleColor.Yellow);
                     break;
             }
         }
@@ -524,9 +627,9 @@ namespace TicketPremium.Console
                 CompraResponse response;
 
                 if (esEfectivo)
-                    response = await _compraClient.ComprarEnEfectivoAsync(codigos, cedula);
+                    response = await _compraClient.ComprarEnEfectivoAsync(SessionToken, codigos, cedula);
                 else
-                    response = await _compraClient.ComprarACreditoAsync(codigos, cedula, plazoMeses);
+                    response = await _compraClient.ComprarACreditoAsync(SessionToken, codigos, cedula, plazoMeses);
 
                 if (response.Exitoso)
                 {
@@ -587,7 +690,7 @@ namespace TicketPremium.Console
             {
                 if (_partidoClient != null)
                 {
-                    var partidos = await _partidoClient.ListarPartidosAsync();
+                    var partidos = await _partidoClient.ListarPartidosAsync(SessionToken);
                     _partidosCache = partidos.ToList();
                     return _partidosCache;
                 }
@@ -615,7 +718,7 @@ namespace TicketPremium.Console
 
         static bool RequerirAdmin()
         {
-            if (_sessionToken != null && _sessionRol == "ADMIN") return true;
+            if (SessionToken != null && _sessionRol == "ADMIN") return true;
             ConsoleUI.MostrarEncabezado();
             ConsoleUI.EscribirLinea("  ACCESO RESTRINGIDO", ConsoleColor.Red);
             ConsoleUI.EscribirLinea("  Esta seccion requiere iniciar sesion como ADMINISTRADOR.", ConsoleColor.DarkGray);
@@ -626,7 +729,7 @@ namespace TicketPremium.Console
 
         static bool RequerirLogin()
         {
-            if (_sessionToken != null) return true;
+            if (SessionToken != null) return true;
             ConsoleUI.MostrarEncabezado();
             ConsoleUI.EscribirLinea("  ACCESO RESTRINGIDO", ConsoleColor.Red);
             ConsoleUI.EscribirLinea("  Para realizar una compra debe iniciar sesion.", ConsoleColor.DarkGray);
@@ -652,19 +755,20 @@ namespace TicketPremium.Console
             {
                 ConsoleUI.MostrarEncabezado();
                 ConsoleUI.EscribirLinea("  INICIAR SESION", ConsoleColor.Yellow);
-                var cedula = ConsoleUI.LeerTexto("  Cedula: ");
+                var email = ConsoleUI.LeerTexto("  Email: ");
                 System.Console.Write("  Contrasena: ");
                 var password = ReadPassword();
                 System.Console.WriteLine();
 
                 try
                 {
-                    var (exitoso, token, nombre, rol, mensaje) = await _authClient.LoginAsync(cedula, password);
+                    var (exitoso, token, nombre, rol, mensaje, cedula) = await _authClient.LoginAsync(email, password);
                     if (exitoso)
                     {
-                        _sessionToken = token;
+                        SessionToken = token;
                         _sessionRol = rol;
                         _sessionNombre = nombre;
+                        _sessionCedula = cedula;
                         ConsoleUI.EscribirLinea($"  Bienvenido/a, {nombre}!", ConsoleColor.Green);
                         ConsoleUI.EscribirLinea($"  Rol: {rol}", ConsoleColor.Cyan);
                     }
@@ -698,12 +802,13 @@ namespace TicketPremium.Console
                 try
                 {
                     var fecha = DateTime.Parse(fechaStr);
-                    var (exitoso, token, nom, rol, mensaje) = await _authClient.RegistroAsync(cedula, nombre, apellido, email, telefono, genero, fecha, password);
+                    var (exitoso, token, nom, rol, mensaje, cedulaResp) = await _authClient.RegistroAsync(cedula, nombre, apellido, email, telefono, genero, fecha, password);
                     if (exitoso)
                     {
-                        _sessionToken = token;
+                        SessionToken = token;
                         _sessionRol = rol;
                         _sessionNombre = nom;
+                        _sessionCedula = cedulaResp;
                         ConsoleUI.EscribirLinea($"  Registro exitoso. Bienvenido/a, {nom}!", ConsoleColor.Green);
                     }
                     else
@@ -721,16 +826,13 @@ namespace TicketPremium.Console
 
         static void CerrarSesion()
         {
-            if (_sessionToken == null)
-            {
-                ConsoleUI.EscribirLinea("  No hay sesion activa.", ConsoleColor.DarkGray);
-                ConsoleUI.Pausa();
-                return;
-            }
-            _sessionToken = null;
+            SessionToken = null;
             _sessionRol = null;
             _sessionNombre = null;
-            ConsoleUI.EscribirLinea("  Sesion cerrada.", ConsoleColor.Green);
+            _sessionCedula = null;
+            _ticketService.Cart.Clear();
+            ConsoleUI.MostrarEncabezado();
+            ConsoleUI.EscribirLinea("  Sesion cerrada exitosamente.", ConsoleColor.Green);
             ConsoleUI.Pausa();
         }
 
@@ -756,3 +858,4 @@ namespace TicketPremium.Console
         }
     }
 }
+

@@ -1,0 +1,512 @@
+@page "/facturacion"
+@using ec.edu.monster.TicketClient.State
+@inject CarritoState Carrito
+@inject AuthState AuthState
+@inject NavigationManager NavManager
+
+@using ec.edu.monster.TicketClient.Utils
+
+@using CompraService
+@inject CompraServiceClient OrquestadorClient
+
+@using ClienteService
+@inject ClienteServiceClient ClienteService
+
+@using PartidoService
+@inject PartidoServiceClient PartidoClient
+
+@using ec.edu.monster.TicketClient.Servicios
+@inject TicketingService TicketCtrl
+
+<h1 style="margin-bottom:0.3rem;">Facturación</h1>
+<p style="font-family:var(--font-mono);font-size:0.8rem;color:rgba(245,240,232,0.4);margin-bottom:1.5rem;">COMPLETA TU COMPRA</p>
+
+<style>
+    .payment-option { transition: all 0.2s ease; background: rgba(255,255,255,0.02); }
+    .payment-option:hover { background: rgba(255,255,255,0.05); }
+    .payment-option.selected { border-color: #C8A951 !important; background: rgba(200,169,81,0.1) !important; box-shadow: 0 0 10px rgba(200,169,81,0.2); }
+</style>
+
+<div class="checkout-steps">
+    <div class="checkout-step completed">
+        <span class="checkout-step-num">&#x2713;</span> Partidos
+    </div>
+    <div class="checkout-connector"></div>
+    <div class="checkout-step completed">
+        <span class="checkout-step-num">&#x2713;</span> Asientos
+    </div>
+    <div class="checkout-connector"></div>
+    <div class="checkout-step active">
+        <span class="checkout-step-num">3</span> Pago
+    </div>
+</div>
+
+@if (compraExitosa)
+{
+    <div style="text-align:center;padding:3rem 2rem;">
+        <svg width="80" height="80" viewBox="0 0 80 80" fill="none" style="margin-bottom:1.5rem;">
+            <circle cx="40" cy="40" r="32" stroke="#2E7D32" stroke-width="3" fill="none"/>
+            <polyline points="24,40 36,52 56,28" stroke="#2E7D32" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <h2 style="color:var(--color-turf);">¡Compra Exitosa!</h2>
+        <p style="font-family:var(--font-body);color:rgba(245,240,232,0.6);margin-top:0.5rem;">
+            @mensajeExito
+        </p>
+        <p style="font-family:var(--font-mono);font-size:0.8rem;color:var(--color-gold);margin-top:0.3rem;">
+            Factura: @numeroFactura
+        </p>
+
+        @if (metodoPago == "CREDITO" && amortizaciones != null && amortizaciones.Count > 0)
+        {
+            <div style="margin-top:2rem;text-align:left;">
+                <h4 style="color:var(--color-gold);margin-bottom:1rem;">Tabla de Amortización</h4>
+                <div style="overflow-x:auto;">
+                    <table style="width:100%;border-collapse:collapse;color:#F5F0E8;font-family:var(--font-mono);font-size:0.8rem;">
+                        <thead>
+                            <tr style="border-bottom:1px solid rgba(200,169,81,0.3);color:rgba(245,240,232,0.6);">
+                                <th style="padding:0.5rem;text-align:center;"># Cuota</th>
+                                <th style="padding:0.5rem;text-align:right;">Valor Cuota</th>
+                                <th style="padding:0.5rem;text-align:right;">Interés Pagado</th>
+                                <th style="padding:0.5rem;text-align:right;">Capital Pagado</th>
+                                <th style="padding:0.5rem;text-align:right;">Saldo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                                <td style="padding:0.5rem;text-align:center;">0</td>
+                                <td style="padding:0.5rem;text-align:right;"></td>
+                                <td style="padding:0.5rem;text-align:right;"></td>
+                                <td style="padding:0.5rem;text-align:right;"></td>
+                                <td style="padding:0.5rem;text-align:right;">@((Carrito.GetTotal() * 1.15m).ToString("F2"))</td>
+                            </tr>
+                            @foreach (var cuota in amortizaciones)
+                            {
+                                <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                                    <td style="padding:0.5rem;text-align:center;">@cuota.NumeroCuota</td>
+                                    <td style="padding:0.5rem;text-align:right;">@cuota.ValorCuota.ToString("F2")</td>
+                                    <td style="padding:0.5rem;text-align:right;">@cuota.InteresPagado.ToString("F2")</td>
+                                    <td style="padding:0.5rem;text-align:right;">@cuota.CapitalPagado.ToString("F2")</td>
+                                    <td style="padding:0.5rem;text-align:right;">@cuota.Saldo.ToString("F2")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+
+        <button class="btn btn-primary btn-lg" style="margin-top:2rem;" @onclick="IrAPartidos">
+            Ver Más Partidos
+        </button>
+    </div>
+}
+else if (Carrito.AsientosSeleccionados.Count == 0)
+{
+    <div class="empty-state">
+        <svg width="64" height="64" viewBox="0 0 48 48" fill="none">
+            <rect x="8" y="14" width="32" height="26" rx="3" stroke="#C8A951" stroke-width="2" opacity="0.3"/>
+            <path d="M16 14V10a8 8 0 0 1 16 0v4" stroke="#C8A951" stroke-width="2" opacity="0.3"/>
+            <line x1="20" y1="24" x2="28" y2="32" stroke="#C8A951" stroke-width="1.5" opacity="0.3"/>
+            <line x1="28" y1="24" x2="20" y2="32" stroke="#C8A951" stroke-width="1.5" opacity="0.3"/>
+        </svg>
+        <h3>Tu carrito está vacío</h3>
+        <p>Selecciona asientos antes de continuar.</p>
+        <button class="btn btn-outline" style="margin-top:1rem;" @onclick="IrAPartidos">
+            Buscar Partidos
+        </button>
+    </div>
+}
+else
+{
+    <div style="display:grid;grid-template-columns:1fr 380px;gap:1.5rem;align-items:start;">
+        <div>
+            <div class="card" style="margin-bottom:1.5rem;">
+                <div class="card-body">
+                    <h3 style="margin-bottom:1rem;color:#F5F0E8;">Datos del Cliente</h3>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;color:#F5F0E8;">
+                        @if (AuthState.IsAdmin)
+                        {
+                            <div style="grid-column: span 2;">
+                                <span style="font-size:0.85rem;color:rgba(245,240,232,0.6);">Buscar por Cédula:</span><br/>
+                                <div style="display:flex;gap:0.5rem;margin-top:0.3rem;">
+                                    <input type="text" @bind="cedulaBusqueda" class="form-control" placeholder="Ingrese cédula del cliente" style="flex:1;background:rgba(255,255,255,0.05);color:#F5F0E8;border:1px solid rgba(255,255,255,0.1);" />
+                                    <button class="btn btn-outline" @onclick="BuscarCliente">Buscar</button>
+                                </div>
+                                @if (clienteEncontrado != null)
+                                {
+                                    <div style="margin-top:1rem;color:#F5F0E8;display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                                        <div>
+                                            <span style="font-size:0.85rem;color:rgba(245,240,232,0.6);">Cliente Encontrado:</span><br/>
+                                            <span style="font-weight:bold;font-size:1.1rem;">@clienteEncontrado.Nombre @clienteEncontrado.Apellido</span>
+                                        </div>
+                                        <div>
+                                            <span style="font-size:0.85rem;color:rgba(245,240,232,0.6);">Cédula:</span><br/>
+                                            <span style="font-weight:bold;font-size:1.1rem;color:#C8A951;">@clienteEncontrado.Cedula</span>
+                                        </div>
+                                        <div>
+                                            <span style="font-size:0.85rem;color:rgba(245,240,232,0.6);">Correo:</span><br/>
+                                            <span style="font-weight:bold;font-size:1.1rem;">@clienteEncontrado.Email</span>
+                                        </div>
+                                        <div>
+                                            <span style="font-size:0.85rem;color:rgba(245,240,232,0.6);">Teléfono:</span><br/>
+                                            <span style="font-weight:bold;font-size:1.1rem;">@clienteEncontrado.Telefono</span>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div>
+                                <span style="font-size:0.85rem;color:rgba(245,240,232,0.6);">Nombre:</span><br/>
+                                <span style="font-weight:bold;font-size:1.1rem;color:#F5F0E8;">@AuthState.Nombre</span>
+                            </div>
+                            <div>
+                                <span style="font-size:0.85rem;color:rgba(245,240,232,0.6);">Cédula:</span><br/>
+                                <span style="font-weight:bold;font-size:1.1rem;color:#F5F0E8;">@AuthState.Cedula</span>
+                            </div>
+                            @if (clienteActual != null)
+                            {
+                                <div>
+                                    <span style="font-size:0.85rem;color:rgba(245,240,232,0.6);">Correo:</span><br/>
+                                    <span style="font-weight:bold;font-size:1.1rem;color:#F5F0E8;">@clienteActual.Email</span>
+                                </div>
+                                <div>
+                                    <span style="font-size:0.85rem;color:rgba(245,240,232,0.6);">Teléfono:</span><br/>
+                                    <span style="font-weight:bold;font-size:1.1rem;color:#F5F0E8;">@clienteActual.Telefono</span>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" style="margin-bottom:1.5rem;">
+                <div class="card-body">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                        <h3 style="margin:0;color:#F5F0E8;">Resumen de Entradas</h3>
+                        <button class="btn btn-outline" style="padding:0.3rem 0.6rem; font-size:0.8rem; border-color:var(--color-referee); color:var(--color-referee);" @onclick="VaciarCarrito">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px; vertical-align:middle;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            Vaciar Carrito
+                        </button>
+                    </div>
+                    @foreach (var asiento in Carrito.AsientosSeleccionados)
+                    {
+                        var partido = partidosDetalles.GetValueOrDefault(asiento.PartidoCodigo);
+                        <div style="display:flex;justify-content:space-between;padding:0.8rem 0;border-bottom:1px solid rgba(255,255,255,0.05);align-items:center;">
+                            <div style="display:flex;gap:1rem;align-items:center;">
+                                @if (partido != null)
+                                {
+                                    <div style="display:flex;flex-direction:column;gap:0.2rem;">
+                                        <div style="display:flex;gap:0.5rem;align-items:center;">
+                                            <img src="@GetFlagUrl(partido.EquipoLocal)" style="width:24px;height:16px;border-radius:2px;object-fit:cover;" />
+                                            <span style="font-weight:bold;color:#F5F0E8;">@partido.EquipoLocal <span style="color:#000000; margin: 0 4px; background: #C8A951; padding: 2px 4px; border-radius: 4px; font-size: 0.8em;">VS</span> @partido.EquipoVisitante</span>
+                                            <img src="@GetFlagUrl(partido.EquipoVisitante)" style="width:24px;height:16px;border-radius:2px;object-fit:cover;" />
+                                        </div>
+                                        <div style="font-size:0.85rem;color:rgba(245,240,232,0.6);">
+                                            @GetStadiumName(partido.EstadioCodigo) | @partido.FechaHora.ToString("dd MMM yyyy, HH:mm") hrs
+                                        </div>
+                                        <div style="font-size:0.85rem;color:rgba(245,240,232,0.6);">
+                                            @asiento.LocalidadDescripcion - Asiento @asiento.Fila-@asiento.Numero
+                                        </div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div style="display:flex;flex-direction:column;gap:0.2rem;">
+                                        <span style="font-weight:bold;color:#F5F0E8;">Partido @asiento.PartidoCodigo</span>
+                                        <div style="font-size:0.85rem;color:rgba(245,240,232,0.6);">
+                                            @asiento.LocalidadDescripcion - Asiento @asiento.Fila-@asiento.Numero
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                            <div style="display:flex;align-items:center;gap:1rem;">
+                                <div style="font-family:var(--font-mono);color:var(--color-gold);">
+                                    $@asiento.Price.ToString("F2")
+                                </div>
+                                <button class="btn btn-outline" style="padding:0.3rem; border:none; color:var(--color-referee);" @onclick="() => RemoverAsiento(asiento.Id)" title="Eliminar asiento">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="3 6 5 6 21 6"></polyline>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                        <line x1="10" y1="11" x2="10" y2="17"></line>
+                                        <line x1="14" y1="11" x2="14" y2="17"></line>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <h3 style="margin-bottom:1rem;color:#F5F0E8;">Método de Pago</h3>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
+                        <div class="@EfectivoCssClass" @onclick="SeleccionarEfectivo" style="cursor:pointer; border:1px solid rgba(255,255,255,0.2); padding:1rem; border-radius:8px;">
+                            <div style="font-size:1.5rem;margin-bottom:0.5rem;">💵</div>
+                            <div style="font-weight:bold;color:#F5F0E8;">Efectivo</div>
+                            <div style="font-size:0.8rem;color:rgba(245,240,232,0.6);margin-top:0.2rem;">Pago al contado</div>
+                        </div>
+                        <div class="@CreditoCssClass" @onclick="SeleccionarCredito" style="cursor:pointer; border:1px solid rgba(255,255,255,0.2); padding:1rem; border-radius:8px;">
+                            <div style="font-size:1.5rem;margin-bottom:0.5rem;">💳</div>
+                            <div style="font-weight:bold;color:#F5F0E8;">Crédito Directo</div>
+                            <div style="font-size:0.8rem;color:rgba(245,240,232,0.6);margin-top:0.2rem;">Con nuestra financiera</div>
+                        </div>
+                    </div>
+
+                    @if (metodoPago == "CREDITO")
+                    {
+                        <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);padding:1rem;border-radius:8px;">
+                            <label style="display:block;font-size:0.85rem;color:rgba(245,240,232,0.6);margin-bottom:0.5rem;">
+                                Plazo de financiamiento:
+                            </label>
+                            <select @bind="mesesPlazo" class="form-control" style="max-width:200px;">
+                                <option value="3">3 Meses</option>
+                                <option value="6">6 Meses</option>
+                                <option value="9">9 Meses</option>
+                                <option value="12">12 Meses</option>
+                                <option value="18">18 Meses</option>
+                            </select>
+                            <div style="font-size:0.8rem;color:var(--color-gold);margin-top:0.5rem;">
+                                * Tasa de interés aplicable: 15%
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="position:sticky;top:20px;">
+            <div class="card-body">
+                <h3 style="margin-bottom:1.5rem;color:#F5F0E8;">Total a Pagar</h3>
+                
+                <div style="display:flex;justify-content:space-between;margin-bottom:0.8rem;">
+                    <span style="color:rgba(245,240,232,0.6);">Subtotal:</span>
+                    <span style="font-family:var(--font-mono);color:#F5F0E8;">$@Carrito.GetTotal().ToString("F2")</span>
+                </div>
+                
+                @if (metodoPago == "EFECTIVO")
+                {
+                    <div style="display:flex;justify-content:space-between;margin-bottom:0.8rem;">
+                        <span style="color:rgba(245,240,232,0.6);">Descuento (12%):</span>
+                        <span style="font-family:var(--font-mono);color:#4CAF50;">-$@((Carrito.GetTotal() * 0.12m).ToString("F2"))</span>
+                    </div>
+                }
+
+                <div style="display:flex;justify-content:space-between;margin-bottom:0.8rem;">
+                    <span style="color:rgba(245,240,232,0.6);">IVA (15%):</span>
+                    <span style="font-family:var(--font-mono);color:#F5F0E8;">$@(((Carrito.GetTotal() - (metodoPago == "EFECTIVO" ? Carrito.GetTotal() * 0.12m : 0m)) * 0.15m).ToString("F2"))</span>
+                </div>
+                
+                <div style="border-top:1px solid rgba(255,255,255,0.1);margin:1rem 0;padding-top:1rem;display:flex;justify-content:space-between;align-items:center;">
+                    <span style="font-weight:bold;font-size:1.2rem;color:#F5F0E8;">Total:</span>
+                    <span style="font-family:var(--font-mono);font-size:1.5rem;color:var(--color-gold);font-weight:bold;">
+                        $@(((Carrito.GetTotal() - (metodoPago == "EFECTIVO" ? Carrito.GetTotal() * 0.12m : 0m)) * 1.15m).ToString("F2"))
+                    </span>
+                </div>
+
+                @if (!string.IsNullOrEmpty(errorMensaje))
+                {
+                    <div style="background:rgba(211,47,47,0.15);border:1px solid rgba(211,47,47,0.3);border-radius:8px;padding:0.8rem;margin-bottom:1.5rem;font-size:0.85rem;color:var(--color-referee);">
+                        @errorMensaje
+                    </div>
+                }
+
+                <button class="btn btn-primary" style="width:100%;padding:1rem;font-size:1.1rem;font-weight:bold;" @onclick="ProcesarPago" disabled="@isProcessing">
+                    @(isProcessing ? "Procesando pago..." : "Pagar Ahora")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool compraExitosa = false;
+    private string errorMensaje = "";
+    private string mensajeExito = "";
+    private string numeroFactura = "";
+    private bool isProcessing = false;
+
+    private string metodoPago = "EFECTIVO";
+    private int mesesPlazo = 3;
+
+    private string cedulaBusqueda = "";
+    private ClienteService.ClienteDto? clienteEncontrado;
+    private Dictionary<string, PartidoDto> partidosDetalles = new();
+
+    private ClienteService.ClienteDto? clienteActual;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthState.IsAdmin && !string.IsNullOrEmpty(AuthState.Cedula))
+        {
+            try { clienteActual = await ClienteService.ObtenerClienteAsync(AuthState.Token, AuthState.Cedula); }
+            catch { }
+        }
+
+        var idsPartidos = Carrito.AsientosSeleccionados.Select(a => a.PartidoCodigo).Distinct().ToList();
+        foreach (var id in idsPartidos)
+        {
+            try
+            {
+                var partido = await PartidoClient.ObtenerPartidoAsync(AuthState.Token, id);
+                if (partido != null)
+                {
+                    partidosDetalles[id] = partido;
+                }
+            }
+            catch (Exception) { /* Ignorar error individual */ }
+        }
+    }
+
+    private async Task BuscarCliente()
+    {
+        errorMensaje = "";
+        try
+        {
+            if (!CedulaValidator.EsValida(cedulaBusqueda, out var errorCedula))
+            {
+                errorMensaje = errorCedula;
+                return;
+            }
+
+            clienteEncontrado = await ClienteService.ObtenerClienteAsync(AuthState.Token, cedulaBusqueda);
+            if (clienteEncontrado == null || string.IsNullOrEmpty(clienteEncontrado.Cedula))
+            {
+                errorMensaje = "Cliente no encontrado.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMensaje = "Error buscando cliente: " + ex.Message;
+        }
+    }
+
+    private async Task ProcesarPago()
+    {
+        errorMensaje = "";
+        
+        string cedulaCliente = AuthState.IsAdmin 
+            ? (clienteEncontrado?.Cedula ?? "") 
+            : AuthState.Cedula;
+
+        if (string.IsNullOrWhiteSpace(cedulaCliente))
+        {
+            errorMensaje = AuthState.IsAdmin ? "Debe buscar y seleccionar un cliente primero." : "Debe iniciar sesión para realizar una compra.";
+            return;
+        }
+
+        isProcessing = true;
+        var codigos = Carrito.GetCodigosAsientos();
+
+        try
+        {
+            CompraResponse response;
+            if (metodoPago == "EFECTIVO")
+            {
+                response = await OrquestadorClient.ComprarEnEfectivoAsync(AuthState.Token, codigos, cedulaCliente);
+            }
+            else
+            {
+                response = await OrquestadorClient.ComprarACreditoAsync(AuthState.Token, codigos, cedulaCliente, mesesPlazo);
+            }
+
+            if (response.Exitoso)
+            {
+                compraExitosa = true;
+                mensajeExito = response.Mensaje;
+                numeroFactura = response.NumeroFactura;
+                if (response.Amortizaciones != null)
+                {
+                    amortizaciones = response.Amortizaciones.ToList();
+                }
+                Carrito.VaciarCarrito();
+            }
+            else
+            {
+                errorMensaje = response.Mensaje;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMensaje = $"Error de conexión: {ex.Message}. Intente de nuevo.";
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    private void IrAPartidos() => NavManager.NavigateTo("/partidos");
+
+    private void VaciarCarrito()
+    {
+        Carrito.VaciarCarrito();
+        foreach (var seat in TicketCtrl.StadiumSeats)
+        {
+            if (seat.Status == "Seleccionado") seat.Status = "Disponible";
+        }
+    }
+
+    private void RemoverAsiento(string id)
+    {
+        Carrito.RemoverAsiento(id);
+        var seat = TicketCtrl.StadiumSeats.FirstOrDefault(s => s.Id == id);
+        if (seat != null && seat.Status == "Seleccionado")
+        {
+            seat.Status = "Disponible";
+        }
+    }
+
+    private void SeleccionarEfectivo() => metodoPago = "EFECTIVO";
+    private void SeleccionarCredito() => metodoPago = "CREDITO";
+
+    private string EfectivoCssClass => metodoPago == "EFECTIVO" ? "payment-option selected" : "payment-option";
+    private string CreditoCssClass => metodoPago == "CREDITO" ? "payment-option selected" : "payment-option";
+
+    private List<CompraService.AmortizacionDto> amortizaciones = new();
+
+    private static string GetFlagUrl(string equipo)
+    {
+        var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            {"México", "mx"}, {"Estados Unidos", "us"}, {"EE. UU.", "us"}, {"Canadá", "ca"},
+            {"Argentina", "ar"}, {"Brasil", "br"}, {"Uruguay", "uy"}, {"Colombia", "co"}, {"Ecuador", "ec"},
+            {"Paraguay", "py"}, {"Francia", "fr"}, {"Alemania", "de"}, {"España", "es"}, {"Inglaterra", "gb-eng"},
+            {"Países Bajos", "nl"}, {"Portugal", "pt"}, {"Bélgica", "be"}, {"Croacia", "hr"}, {"Italia", "it"},
+            {"Suiza", "ch"}, {"Suecia", "se"}, {"Noruega", "no"}, {"Escocia", "gb-sct"}, {"Bosnia y Herzegovina", "ba"},
+            {"Chequia", "cz"}, {"Bosnia y Herz.", "ba"}, {"Gales", "gb-wls"}, {"Austria", "at"},
+            {"Marruecos", "ma"}, {"Senegal", "sn"}, {"Egipto", "eg"}, {"Argelia", "dz"}, {"Costa de Marfil", "ci"},
+            {"Túnez", "tn"}, {"Sudáfrica", "za"}, {"Ghana", "gh"}, {"RD Congo", "cd"}, {"Cabo Verde", "cv"},
+            {"Japón", "jp"}, {"Corea del Sur", "kr"}, {"Arabia Saudita", "sa"}, {"Irán", "ir"}, {"Australia", "au"},
+            {"Uzbekistán", "uz"}, {"Irak", "iq"}, {"Jordania", "jo"}, {"Qatar", "qa"}, {"Türkiye", "tr"},
+            {"Nueva Zelanda", "nz"}, {"Haití", "ht"}, {"Panamá", "pa"}, {"Curazao", "cw"}
+        };
+        if (equipo != null && dict.TryGetValue(equipo.Trim(), out var code))
+            return $"https://flagcdn.com/w80/{code}.png";
+        
+        return "https://flagcdn.com/w80/un.png";
+    }
+
+    private static string GetStadiumName(string codigo) => codigo switch
+    {
+        "EST-001" => "MetLife Stadium",
+        "EST-002" => "AT&T Stadium",
+        "EST-003" => "Arrowhead Stadium",
+        "EST-004" => "NRG Stadium",
+        "EST-005" => "Mercedes-Benz Stadium",
+        "EST-006" => "SoFi Stadium",
+        "EST-007" => "Lincoln Financial Field",
+        "EST-008" => "Lumen Field",
+        "EST-009" => "Levi's Stadium",
+        "EST-010" => "Gillette Stadium",
+        "EST-011" => "Hard Rock Stadium",
+        "EST-012" => "Estadio Azteca",
+        "EST-013" => "Estadio BBVA",
+        "EST-014" => "Estadio Akron",
+        "EST-015" => "BC Place",
+        "EST-016" => "BMO Field",
+        _ => codigo,
+    };
+}

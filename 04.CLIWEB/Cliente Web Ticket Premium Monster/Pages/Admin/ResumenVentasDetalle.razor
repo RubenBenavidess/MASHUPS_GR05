@@ -1,0 +1,597 @@
+@page "/admin/resumen-ventas/{CodigoPartido}"
+@using AsientoService
+@using PartidoService
+@using ReporteService
+@using LocalidadService
+@using ec.edu.monster.TicketClient.State
+@inject ReporteServiceClient ReporteClient
+@inject AsientoServiceClient AsientoClient
+@inject PartidoServiceClient PartidoClient
+@inject LocalidadServiceClient LocalidadClient
+@inject AuthState AuthState
+@inject NavigationManager Nav
+
+@if (!AuthState.IsAdmin)
+{
+    <div class="alert alert-danger">Acceso denegado. Se requiere rol de administrador.</div>
+}
+else if (isLoading)
+{
+    <div class="loading-container">
+        <div class="loading-spinner"></div>
+        <p>Cargando datos de ventas...</p>
+    </div>
+}
+else if (partido == null)
+{
+    <div class="alert alert-danger">No se encontr&#243; el partido.</div>
+}
+else
+{
+    <div class="match-hero">
+        <div class="match-hero-teams">
+            <img src="@GetFlagUrl(partido.EquipoLocal)" alt="@partido.EquipoLocal"
+                 style="width:48px;height:32px;border-radius:4px;object-fit:cover;box-shadow:0 2px 8px rgba(0,0,0,0.4);margin-right:1rem;" />
+            <span class="match-hero-team">@partido.EquipoLocal</span>
+            <span class="match-hero-vs">VS</span>
+            <span class="match-hero-team">@partido.EquipoVisitante</span>
+            <img src="@GetFlagUrl(partido.EquipoVisitante)" alt="@partido.EquipoVisitante"
+                 style="width:48px;height:32px;border-radius:4px;object-fit:cover;box-shadow:0 2px 8px rgba(0,0,0,0.4);margin-left:1rem;" />
+        </div>
+        <div class="match-hero-meta">
+            <div class="match-hero-venue">@GetStadiumName(partido.EstadioCodigo)</div>
+            <div class="match-hero-date">@partido.FechaHora.ToString("dd \\de MMMM, yyyy \\- HH:mm", new System.Globalization.CultureInfo("es-MX"))</div>
+        </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 320px;gap:1.5rem;align-items:start;margin-top:2rem;">
+        <div>
+            <div style="background:linear-gradient(145deg,#0d1f3a,#0a1628);border-radius:20px;padding:1rem;box-shadow:0 8px 40px rgba(0,0,0,0.6);">
+
+                <!-- LEYENDA -->
+                <div style="display:flex;gap:1.2rem;justify-content:center;margin-bottom:0.8rem;">
+                    <div style="display:flex;align-items:center;gap:5px;">
+                        <div style="width:9px;height:9px;border-radius:2px;background:#F44336;"></div>
+                        <span style="font-family:var(--font-mono);font-size:0.62rem;color:rgba(245,240,232,0.5);">Vendido</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:5px;">
+                        <div style="width:9px;height:9px;border-radius:2px;background:#4CAF50;"></div>
+                        <span style="font-family:var(--font-mono);font-size:0.62rem;color:rgba(245,240,232,0.5);">No Vendido (Libre)</span>
+                    </div>
+                </div>
+
+                <!-- ESTADIO -->
+                @{
+                    var zN  = GetZone("Norte");
+                    var zS  = GetZone("Sur");
+                    var zVN = GetZone("VipNorte");
+                    var zVS = GetZone("VipSur");
+                    var zL  = GetZone("Lateral");
+                }
+
+                <div style="display:grid;grid-template-columns:70px 1fr 70px;grid-template-rows:90px 240px 90px;gap:4px;">
+                    <!-- Fila 1: esquina vacia | NORTE | esquina vacia -->
+                    <div></div>
+                    @if (zN != null)
+                    {
+                        <div class="sz-block @(selectedZone==zN.CodigoLocalidad?"sz-sel":"")" style="@BlockBg(zN.CodigoLocalidad)"
+                             @onclick="()=>Toggle(zN.CodigoLocalidad)">
+                            @{ var seatsN = GetSeatGrid(zN.CodigoLocalidad); }
+                            <div style="display:grid;grid-template-columns:repeat(@seatsN.Cols,1fr);grid-template-rows:repeat(@seatsN.Rows,1fr);gap:1px;width:100%;height:100%;">
+                                @foreach (var seat in seatsN.Seats)
+                                {
+                                    <div style="background:@seat.Color;border-radius:1px;"></div>
+                                }
+                            </div>
+                        </div>
+                    }
+                    else { <div></div> }
+                    <div></div>
+
+                    <!-- Fila 2: VIP_N | (Lateral L + Cancha + Lateral R) | VIP_S -->
+                    @if (zVN != null)
+                    {
+                        <div class="sz-block @(selectedZone==zVN.CodigoLocalidad?"sz-sel":"")" style="@BlockBg(zVN.CodigoLocalidad)"
+                             @onclick="()=>Toggle(zVN.CodigoLocalidad)">
+                            @{ var seatsVN = GetSeatGridV(zVN.CodigoLocalidad); }
+                            <div style="display:grid;grid-template-columns:repeat(@seatsVN.Cols,1fr);grid-template-rows:repeat(@seatsVN.Rows,1fr);gap:1px;width:100%;height:100%;">
+                                @foreach (var seat in seatsVN.Seats)
+                                {
+                                    <div style="background:@seat.Color;border-radius:1px;"></div>
+                                }
+                            </div>
+                        </div>
+                    }
+                    else { <div></div> }
+
+                    <!-- Sub-grid central: Lateral Oeste | Cancha | Lateral Este -->
+                    <div style="display:grid;grid-template-columns:1fr 2.2fr 1fr;gap:4px;height:100%;">
+                        @if (zL != null)
+                        {
+                            <div class="sz-block @(selectedZone=="Lateral_L"?"sz-sel":"")" style="@BlockBg(zL.CodigoLocalidad, "Lateral_L")"
+                                 @onclick='()=>Toggle("Lateral_L")'>
+                                @{ var seatsLW = GetSeatGridV(zL.CodigoLocalidad, "left"); }
+                                <div style="display:grid;grid-template-columns:repeat(@seatsLW.Cols,1fr);grid-template-rows:repeat(@seatsLW.Rows,1fr);gap:1px;width:100%;height:100%;">
+                                    @foreach (var seat in seatsLW.Seats)
+                                    {
+                                        <div style="background:@seat.Color;border-radius:1px;"></div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                        else { <div></div> }
+
+                        <!-- CANCHA -->
+                        <div style="background:linear-gradient(160deg,#1a5c1e,#0f3a11);border-radius:12px;overflow:hidden;box-shadow:inset 0 0 20px rgba(0,0,0,0.5);">
+                            <svg viewBox="0 0 300 210" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;">
+                                <rect width="300" height="210" fill="#1a5c1e"/>
+                                <rect y="0"   width="300" height="26" fill="#1e6622"/>
+                                <rect y="52"  width="300" height="26" fill="#1e6622"/>
+                                <rect y="104" width="300" height="26" fill="#1e6622"/>
+                                <rect y="156" width="300" height="26" fill="#1e6622"/>
+                                <rect x="7" y="7" width="286" height="196" rx="3" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="1.8"/>
+                                <line x1="150" y1="7" x2="150" y2="203" stroke="rgba(255,255,255,0.6)" stroke-width="1.4"/>
+                                <circle cx="150" cy="105" r="34" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="1.4"/>
+                                <circle cx="150" cy="105" r="2.5" fill="rgba(255,255,255,0.8)"/>
+                                <rect x="7" y="60" width="46" height="90" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.4"/>
+                                <rect x="7" y="83" width="18" height="44" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.1"/>
+                                <rect x="247" y="60" width="46" height="90" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.4"/>
+                                <rect x="275" y="83" width="18" height="44" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.1"/>
+                                <circle cx="33" cy="105" r="2" fill="rgba(255,255,255,0.65)"/>
+                                <circle cx="267" cy="105" r="2" fill="rgba(255,255,255,0.65)"/>
+                            </svg>
+                        </div>
+
+                        <!-- Tribuna Este (Mitad Derecha) -->
+                        @if (zL != null)
+                        {
+                            <div class="sz-block @(selectedZone=="Lateral_R"?"sz-sel":"")" style="@BlockBg(zL.CodigoLocalidad, "Lateral_R")"
+                                 @onclick='()=>Toggle("Lateral_R")'>
+                                @{ var seatsLE = GetSeatGridV(zL.CodigoLocalidad, "right"); }
+                                <div style="display:grid;grid-template-columns:repeat(@seatsLE.Cols,1fr);grid-template-rows:repeat(@seatsLE.Rows,1fr);gap:1px;width:100%;height:100%;">
+                                    @foreach (var seat in seatsLE.Seats)
+                                    {
+                                        <div style="background:@seat.Color;border-radius:1px;"></div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                        else { <div></div> }
+                    </div>
+
+                    @if (zVS != null)
+                    {
+                        <div class="sz-block @(selectedZone==zVS.CodigoLocalidad?"sz-sel":"")" style="@BlockBg(zVS.CodigoLocalidad)"
+                             @onclick="()=>Toggle(zVS.CodigoLocalidad)">
+                            @{ var seatsVS = GetSeatGridV(zVS.CodigoLocalidad); }
+                            <div style="display:grid;grid-template-columns:repeat(@seatsVS.Cols,1fr);grid-template-rows:repeat(@seatsVS.Rows,1fr);gap:1px;width:100%;height:100%;">
+                                @foreach (var seat in seatsVS.Seats)
+                                {
+                                    <div style="background:@seat.Color;border-radius:1px;"></div>
+                                }
+                            </div>
+                        </div>
+                    }
+                    else { <div></div> }
+
+                    <!-- Fila 3: esquina vacia | SUR | esquina vacia -->
+                    <div></div>
+                    @if (zS != null)
+                    {
+                        <div class="sz-block @(selectedZone==zS.CodigoLocalidad?"sz-sel":"")" style="@BlockBg(zS.CodigoLocalidad)"
+                             @onclick="()=>Toggle(zS.CodigoLocalidad)">
+                            @{ var seatsS = GetSeatGrid(zS.CodigoLocalidad); }
+                            <div style="display:grid;grid-template-columns:repeat(@seatsS.Cols,1fr);grid-template-rows:repeat(@seatsS.Rows,1fr);gap:1px;width:100%;height:100%;">
+                                @foreach (var seat in seatsS.Seats)
+                                {
+                                    <div style="background:@seat.Color;border-radius:1px;"></div>
+                                }
+                            </div>
+                        </div>
+                    }
+                    else { <div></div> }
+                    <div></div>
+                </div>
+            </div>
+
+            <!-- PANEL EXPANDIDO AL SELECCIONAR ZONA -->
+            @if (selectedZone != null)
+            {
+                string dbCode = selectedZone;
+                string sideSuffix = "";
+                if (selectedZone == "Lateral_L" || selectedZone == "Lateral_R")
+                {
+                    var zLat = GetZone("Lateral");
+                    if (zLat != null) dbCode = zLat.CodigoLocalidad;
+                    sideSuffix = selectedZone == "Lateral_L" ? "Oeste" : "Este";
+                }
+
+                var allSeats = todosLosAsientos.Where(s => s.LocalidadCodigo == dbCode).ToList();
+
+                var seatsForPanelRows = allSeats.GroupBy(s => s.Fila).OrderBy(g => g.Key)
+                    .Select(grp => {
+                        var sorted = grp.OrderBy(s => s.Numero).ToList();
+                        if (selectedZone == "Lateral_L") return sorted.Take(sorted.Count / 2).ToList();
+                        if (selectedZone == "Lateral_R") return sorted.Skip(sorted.Count / 2).ToList();
+                        return sorted;
+                    })
+                    .Where(r => r.Any())
+                    .ToList();
+
+                int totalVend = seatsForPanelRows.SelectMany(r => r).Count(s => allVentasAsientos.Any(v => v.CodigoAsiento == s.Codigo));
+                int totalDisp = seatsForPanelRows.SelectMany(r => r).Count(s => !allVentasAsientos.Any(v => v.CodigoAsiento == s.Codigo));
+                string dispName = GetLocalidadName(dbCode);
+                if (sideSuffix != "") dispName += $" ({sideSuffix})";
+
+                <div style="margin-top:1rem;background:rgba(255,255,255,0.03);border:1px solid rgba(200,169,81,0.3);border-radius:14px;padding:1.2rem;animation:fadeIn 0.2s ease;">
+                    <div style="display:flex;align-items:baseline;gap:1rem;margin-bottom:1rem;flex-wrap:wrap;">
+                        <span style="font-family:var(--font-display);font-size:0.9rem;font-weight:700;color:#C8A951;">@dispName</span>
+                        <span style="font-family:var(--font-mono);font-size:0.78rem;color:rgba(245,240,232,0.55);">@totalVend vendidos &nbsp;·&nbsp; @totalDisp disponibles</span>
+                    </div>
+                    <div style="overflow-x:auto;">
+                        @foreach (var rowList in seatsForPanelRows)
+                        {
+                            var firstSeat = rowList.First();
+                            <div style="display:flex;align-items:center;gap:4px;margin-bottom:5px;min-width:max-content;">
+                                <span style="font-family:var(--font-mono);font-size:0.6rem;color:rgba(245,240,232,0.3);width:14px;text-align:right;flex-shrink:0;">@firstSeat.Fila</span>
+                                <div style="display:flex;gap:4px;">
+                                    @foreach (var seat in rowList)
+                                    {
+                                        bool isSold = allVentasAsientos.Any(v => v.CodigoAsiento == seat.Codigo);
+                                        string bg = isSold ? "rgba(244,67,54,0.8)" : "rgba(76,175,80,0.8)";
+                                        string brd = selectedAsiento?.Codigo == seat.Codigo ? "#C8A951" : "rgba(255,255,255,0.1)";
+                                        <button @onclick="()=>SeleccionarAsientoOcupado(seat)" 
+                                                style="width:22px;height:22px;border-radius:4px;border:1px solid @brd;background:@bg;color:white;font-size:0.55rem;font-family:var(--font-mono);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;transition:all 0.2s;">
+                                            @seat.Numero
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+            
+
+            <div style="margin-top: 2rem;">
+                <h3 style="margin-bottom: 1rem;">RESUMEN DE VENTAS</h3>
+                <table class="table" style="width: 100%; border-collapse: collapse; text-align: left;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.2);">
+                            <th style="padding: 1rem; color: var(--color-gold);">Localidad</th>
+                            <th style="padding: 1rem; color: var(--color-gold);">Vendidos</th>
+                            <th style="padding: 1rem; color: var(--color-gold);">Total recaudado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var res in resumenLocalidades)
+                        {
+                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                <td style="padding: 1rem;">@res.DescripcionLocalidad</td>
+                                <td style="padding: 1rem;">@res.BoletosVendidos</td>
+                                <td style="padding: 1rem;">$@res.TotalRecaudado.ToString("0.00")</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr style="border-top: 2px solid rgba(200,169,81,0.5); background: var(--color-gold); font-weight: bold;">
+                            <td style="padding: 1rem; color: black;">TOTAL</td>
+                            <td style="padding: 1rem; color: black;">@resumenLocalidades.Sum(r => r.BoletosVendidos)</td>
+                            <td style="padding: 1rem; color: black;">$@resumenLocalidades.Sum(r => r.TotalRecaudado).ToString("0.00")</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- DETALLE DE COMPRA PANEL -->
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:1.5rem;position:sticky;top:2rem;">
+            <h4 style="color:var(--color-gold);margin-top:0;margin-bottom:1.5rem;font-family:var(--font-display);font-size:1.1rem;text-transform:uppercase;">Detalle de Compra</h4>
+            
+            @if (selectedVenta != null)
+            {
+                <div style="display:flex;flex-direction:column;gap:1rem;">
+                    <div>
+                        <p style="color:rgba(255,255,255,0.5);font-size:0.75rem;margin:0;font-family:var(--font-mono);text-transform:uppercase;">Cliente</p>
+                        <p style="color:white;margin:0;font-weight:600;font-size:1rem;">@selectedVenta.NombreCliente @selectedVenta.ApellidoCliente</p>
+                    </div>
+                    <div>
+                        <p style="color:rgba(255,255,255,0.5);font-size:0.75rem;margin:0;font-family:var(--font-mono);text-transform:uppercase;">Identificaci&#243;n</p>
+                        <p style="color:white;margin:0;font-family:var(--font-mono);">@selectedVenta.CedulaCliente</p>
+                    </div>
+                    <div style="background:rgba(200,169,81,0.1);padding:0.8rem;border-radius:8px;border:1px solid rgba(200,169,81,0.3);">
+                        <p style="color:var(--color-gold);font-size:0.75rem;margin:0;font-family:var(--font-mono);text-transform:uppercase;">Asiento</p>
+                        <p style="color:white;margin:0;font-weight:700;font-size:1.2rem;">Fila @selectedVenta.Fila - N&#176; @selectedVenta.Numero</p>
+                        <p style="color:rgba(255,255,255,0.6);margin:0;font-size:0.8rem;">@GetLocalidadName(selectedAsiento?.LocalidadCodigo ?? "")</p>
+                    </div>
+                    <div>
+                        <p style="color:rgba(255,255,255,0.5);font-size:0.75rem;margin:0;font-family:var(--font-mono);text-transform:uppercase;">Factura</p>
+                        <p style="color:white;margin:0;font-family:var(--font-mono);">#@selectedVenta.NumeroFactura</p>
+                    </div>
+                    <div>
+                        <p style="color:rgba(255,255,255,0.5);font-size:0.75rem;margin:0;font-family:var(--font-mono);text-transform:uppercase;">Fecha de Compra</p>
+                        <p style="color:white;margin:0;">@selectedVenta.FechaCompra.ToString("dd MMM yyyy HH:mm")</p>
+                    </div>
+                </div>
+            }
+            else if (selectedAsiento != null)
+            {
+                <p style="color:rgba(255,255,255,0.6);font-size:0.9rem;line-height:1.5;">El asiento <b>Fila @selectedAsiento.Fila - @selectedAsiento.Numero</b> est&#225; Libre (No Vendido).</p>
+            }
+            else
+            {
+                <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:3rem 0;opacity:0.5;">
+                    <p style="text-align:center;margin:0;font-size:0.9rem;font-family:var(--font-mono);">Haz clic en un asiento para ver el detalle</p>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+<style>
+    .sz-block {
+        border-radius: 8px;
+        transition: filter 0.15s, transform 0.12s;
+        overflow: hidden;
+        padding: 4px;
+        box-sizing: border-box;
+    }
+    .sz-sel { border-color: #C8A951 !important; box-shadow: 0 0 0 2px rgba(200,169,81,0.5); }
+</style>
+
+@code {
+    [Parameter] public string CodigoPartido { get; set; } = "";
+
+    private bool isLoading = true;
+    private PartidoDto? partido;
+    private string? selectedZone = null;
+
+    private List<ResumenLocalidadDto> resumenLocalidades = new();
+    private LocalidadDto[] todasLocalidades = Array.Empty<LocalidadDto>();
+    private List<DetalleVentaAsientoDto> allVentasAsientos = new();
+    private List<AsientoDto> todosLosAsientos = new();
+
+    private DetalleVentaAsientoDto? selectedVenta;
+    private AsientoDto? selectedAsiento;
+
+    private Dictionary<string, string> posCodes = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthState.IsAdmin)
+        {
+            isLoading = false;
+            return;
+        }
+
+        try
+        {
+            var partidos = await PartidoClient.ListarPartidosAsync(AuthState.Token);
+            partido = partidos.FirstOrDefault(p => p.Codigo == CodigoPartido);
+
+            if (partido != null)
+            {
+                todasLocalidades = await LocalidadClient.ListarLocalidadesAsync(AuthState.Token);
+                resumenLocalidades = (await ReporteClient.ResumenVentasPorPartidoAsync(AuthState.Token, CodigoPartido)).ToList();
+                allVentasAsientos = (await ReporteClient.DetallesVentasPorPartidoAsync(AuthState.Token, CodigoPartido)).ToList();
+                
+                var asientosResponse = await AsientoClient.ListarAsientosPorPartidoAsync(AuthState.Token, partido.Codigo);
+                todosLosAsientos = asientosResponse.ToList();
+
+                // Obtener solo los codigos de localidades que existen en ESTE partido (desde los asientos)
+                var codigosDelPartido = todosLosAsientos.Select(a => a.LocalidadCodigo).Distinct().ToList();
+                
+                // Filtrar todasLocalidades a solo las de este partido y ordenar por precio descendente
+                var localidadesDelPartido = todasLocalidades
+                    .Where(l => codigosDelPartido.Contains(l.Codigo))
+                    .OrderByDescending(l => l.PrecioBase)
+                    .ToList();
+
+                // Mapear posiciones por precio (igual que SeleccionAsientos)
+                var pos = new[] { "VipNorte", "VipSur", "Lateral", "Norte", "Sur" };
+                for (int i = 0; i < localidadesDelPartido.Count && i < pos.Length; i++)
+                {
+                    posCodes[pos[i]] = localidadesDelPartido[i].Codigo;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private ResumenLocalidadDto? GetZone(string posicion)
+    {
+        if (posCodes.TryGetValue(posicion, out var cod))
+        {
+            // Buscar en resumenLocalidades por CodigoLocalidad
+            var found = resumenLocalidades.FirstOrDefault(r => r.CodigoLocalidad == cod);
+            if (found != null) return found;
+            
+            // Si no existe en el resumen (0 ventas), crear un DTO temporal para que se renderice la zona
+            var loc = todasLocalidades.FirstOrDefault(l => l.Codigo == cod);
+            if (loc != null)
+            {
+                return new ResumenLocalidadDto
+                {
+                    CodigoLocalidad = cod,
+                    DescripcionLocalidad = loc.Descripcion,
+                    BoletosVendidos = 0,
+                    TotalRecaudado = 0
+                };
+            }
+        }
+        return null;
+    }
+    
+    private string GetLocalidadName(string code) 
+    {
+        var loc = todasLocalidades.FirstOrDefault(l => l.Codigo == code);
+        if (loc != null) return loc.Descripcion;
+        return resumenLocalidades.FirstOrDefault(r => r.CodigoLocalidad == code)?.DescripcionLocalidad ?? code;
+    }
+
+    private void Toggle(string cod) => selectedZone = selectedZone == cod ? null : cod;
+
+    private void SeleccionarAsientoOcupado(AsientoDto? asiento)
+    {
+        if (asiento == null) return;
+        selectedAsiento = asiento;
+        selectedVenta = allVentasAsientos.FirstOrDefault(v => v.Fila == asiento.Fila && v.Numero == asiento.Numero && v.CodigoAsiento == asiento.Codigo);
+    }
+
+    private string BlockBg(string code, string pseudoCode = null)
+    {
+        string target = pseudoCode ?? code;
+        string brd = selectedZone == target ? "#C8A951" : "rgba(255,255,255,0.06)";
+        return $"background:rgba(255,255,255,0.03);border:2px solid {brd};";
+    }
+
+    public class SeatItem
+    {
+        public string Color { get; set; } = "transparent";
+        public AsientoDto? Asiento { get; set; }
+    }
+
+    public class SeatGridData
+    {
+        public int Rows { get; set; }
+        public int Cols { get; set; }
+        public List<SeatItem> Seats { get; set; } = new();
+    }
+
+    private string SeatColor(string fila, int numero, string codigoAsiento)
+    {
+        // En la vista de administrador: Vendido (Rojo) vs No Vendido (Verde)
+        // Match by CodigoAsiento to avoid false positives across zones
+        var isSold = allVentasAsientos.Any(v => v.CodigoAsiento == codigoAsiento);
+        return isSold ? "#F44336" : "#4CAF50";
+    }
+
+    private SeatGridData GetSeatGrid(string codigoLocalidad)
+    {
+        var seats = todosLosAsientos.Where(s => s.LocalidadCodigo == codigoLocalidad).ToList();
+        if (!seats.Any()) return new SeatGridData { Rows = 1, Cols = 1, Seats = new List<SeatItem> { new SeatItem() } };
+
+        var rows = seats.GroupBy(s => s.Fila).OrderBy(g => g.Key).ToList();
+        int numCols = rows.Max(r => r.Count());
+        int numRows = rows.Count;
+        var items = new List<SeatItem>();
+
+        foreach (var row in rows)
+        {
+            var sorted = row.OrderBy(s => s.Numero).ToList();
+            for (int c = 0; c < numCols; c++)
+            {
+                if (c < sorted.Count)
+                    items.Add(new SeatItem { Color = SeatColor(sorted[c].Fila, sorted[c].Numero, sorted[c].Codigo), Asiento = sorted[c] });
+                else
+                    items.Add(new SeatItem());
+            }
+        }
+
+        return new SeatGridData { Rows = numRows, Cols = numCols, Seats = items };
+    }
+
+    private SeatGridData GetSeatGridV(string codigoLocalidad, string half = "all")
+    {
+        var seats = todosLosAsientos.Where(s => s.LocalidadCodigo == codigoLocalidad).ToList();
+        if (!seats.Any()) return new SeatGridData { Rows = 1, Cols = 1, Seats = new List<SeatItem> { new SeatItem() } };
+
+        var dataRows = seats.GroupBy(s => s.Fila).OrderBy(g => g.Key).ToList();
+        
+        if (half == "left") dataRows.Reverse();
+
+        var matrixRows = new List<List<SeatItem>>();
+        int maxVisRows = 0;
+
+        foreach (var row in dataRows)
+        {
+            var sorted = row.OrderBy(s => s.Numero).ToList();
+            int count = sorted.Count;
+            if (half == "left") sorted = sorted.Take(count / 2).ToList();
+            else if (half == "right") sorted = sorted.Skip(count / 2).ToList();
+            
+            if (sorted.Count > maxVisRows) maxVisRows = sorted.Count;
+            
+            var rowColors = new List<SeatItem>();
+            foreach (var s in sorted)
+            {
+                rowColors.Add(new SeatItem { Color = SeatColor(s.Fila, s.Numero, s.Codigo), Asiento = s });
+            }
+            matrixRows.Add(rowColors);
+        }
+
+        int numCols = dataRows.Count;
+        int numRows = maxVisRows;
+        var finalItems = new List<SeatItem>();
+
+        for (int r = 0; r < numRows; r++)
+        {
+            for (int c = 0; c < numCols; c++)
+            {
+                if (r < matrixRows[c].Count) finalItems.Add(matrixRows[c][r]);
+                else finalItems.Add(new SeatItem());
+            }
+        }
+
+        return new SeatGridData { Rows = numRows, Cols = numCols, Seats = finalItems };
+    }
+
+    private static string GetStadiumName(string codigo) => codigo switch
+    {
+        "EST-001" => "MetLife Stadium",
+        "EST-002" => "AT&T Stadium",
+        "EST-003" => "Arrowhead Stadium",
+        "EST-004" => "NRG Stadium",
+        "EST-005" => "Mercedes-Benz Stadium",
+        "EST-006" => "SoFi Stadium",
+        "EST-007" => "Lincoln Financial Field",
+        "EST-008" => "Lumen Field",
+        "EST-009" => "Levi's Stadium",
+        "EST-010" => "Gillette Stadium",
+        "EST-011" => "Hard Rock Stadium",
+        "EST-012" => "Estadio Azteca",
+        "EST-013" => "Estadio BBVA",
+        "EST-014" => "Estadio Akron",
+        "EST-015" => "BC Place",
+        "EST-016" => "BMO Field",
+        _ => codigo,
+    };
+
+    private static string GetFlagUrl(string equipo)
+    {
+        var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            {"Mexico", "mx"}, {"Estados Unidos", "us"}, {"EE. UU.", "us"}, {"Canada", "ca"},
+            {"Argentina", "ar"}, {"Brasil", "br"}, {"Uruguay", "uy"}, {"Colombia", "co"}, {"Ecuador", "ec"},
+            {"Paraguay", "py"}, {"Francia", "fr"}, {"Alemania", "de"}, {"Espana", "es"}, {"Inglaterra", "gb-eng"},
+            {"Paises Bajos", "nl"}, {"Portugal", "pt"}, {"Belgica", "be"}, {"Croacia", "hr"}, {"Italia", "it"},
+            {"Suiza", "ch"}, {"Suecia", "se"}, {"Noruega", "no"}, {"Escocia", "gb-sct"}, {"Bosnia y Herzegovina", "ba"},
+            {"Chequia", "cz"}, {"Bosnia y Herz.", "ba"}, {"Gales", "gb-wls"}, {"Austria", "at"},
+            {"Marruecos", "ma"}, {"Senegal", "sn"}, {"Egipto", "eg"}, {"Argelia", "dz"}, {"Costa de Marfil", "ci"},
+            {"Tunez", "tn"}, {"Sudafrica", "za"}, {"Ghana", "gh"}, {"RD Congo", "cd"}, {"Cabo Verde", "cv"},
+            {"Japon", "jp"}, {"Corea del Sur", "kr"}, {"Arabia Saudita", "sa"}, {"Iran", "ir"}, {"Australia", "au"},
+            {"Uzbekistan", "uz"}, {"Irak", "iq"}, {"Jordania", "jo"}, {"Qatar", "qa"}, {"Turkiye", "tr"},
+            {"Nueva Zelanda", "nz"}, {"Haiti", "ht"}, {"Panama", "pa"}, {"Curazao", "cw"},
+            {"Costa Rica", "cr"}, {"Honduras", "hn"}, {"Jamaica", "jm"}, {"Peru", "pe"}, {"Chile", "cl"},
+            {"Bolivia", "bo"}, {"Venezuela", "ve"}, {"Dinamarca", "dk"}, {"Polonia", "pl"}, {"Rumania", "ro"},
+            {"Serbia", "rs"}, {"Grecia", "gr"}, {"Hungria", "hu"}, {"Eslovaquia", "sk"}, {"Eslovenia", "si"},
+            {"Finlandia", "fi"}, {"Islandia", "is"}, {"Irlanda", "ie"}, {"Camerun", "cm"}, {"Nigeria", "ng"}
+        };
+
+        string equipoNorm = new string(equipo.Normalize(System.Text.NormalizationForm.FormD)
+            .Where(c => System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c) != System.Globalization.UnicodeCategory.NonSpacingMark)
+            .ToArray());
+
+        if (dict.TryGetValue(equipoNorm.Trim(), out var code))
+            return $"https://flagcdn.com/w80/{code}.png";
+
+        return "https://flagcdn.com/w80/un.png";
+    }
+}

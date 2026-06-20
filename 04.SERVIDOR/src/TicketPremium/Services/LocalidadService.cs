@@ -16,15 +16,13 @@ public class LocalidadService : ILocalidadService
 
     public async Task<List<LocalidadDto>> ListarLocalidades(string sessionToken)
     {
-        RequerirAdmin(sessionToken);
         var result = await _db.Localidades.OrderBy(l => l.EstadioCodigo).ThenBy(l => l.Descripcion)
             .Select(l => new LocalidadDto { Codigo = l.Codigo, Descripcion = l.Descripcion, Capacidad = l.Capacidad, PrecioBase = l.PrecioBase, EstadioCodigo = l.EstadioCodigo }).ToListAsync();
-        return result;
+        Console.WriteLine($"ListarLocalidades devolvió {result.Count} registros"); return result;
     }
 
     public async Task<LocalidadDto> ObtenerLocalidad(string sessionToken, string codigo)
     {
-        RequerirAdmin(sessionToken);
         var l = await _db.Localidades.FindAsync(codigo)
             ?? throw new FaultException(new FaultReason("Localidad no encontrada"), new FaultCode("NotFound"));
         return new LocalidadDto { Codigo = l.Codigo, Descripcion = l.Descripcion, Capacidad = l.Capacidad, PrecioBase = l.PrecioBase, EstadioCodigo = l.EstadioCodigo };

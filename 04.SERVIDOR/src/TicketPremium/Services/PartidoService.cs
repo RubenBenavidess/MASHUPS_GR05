@@ -16,7 +16,6 @@ public class PartidoService : IPartidoService
 
     public async Task<List<PartidoDto>> ListarPartidos(string sessionToken)
     {
-        RequerirAdminOCliente(sessionToken);
         var result = await _db.Partidos.OrderBy(p => p.FechaHora)
             .Select(p => new PartidoDto { Codigo = p.Codigo, EquipoLocal = p.EquipoLocal, EquipoVisitante = p.EquipoVisitante, FechaHora = p.FechaHora, EstadioCodigo = p.EstadioCodigo }).ToListAsync();
         return result;

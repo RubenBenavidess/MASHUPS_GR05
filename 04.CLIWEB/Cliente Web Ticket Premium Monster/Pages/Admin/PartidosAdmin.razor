@@ -1,0 +1,178 @@
+@page "/admin/partidos"
+@using PartidoService
+@using ec.edu.monster.TicketClient.State
+@inject PartidoServiceClient PartidoService
+@inject AuthState AuthState
+
+<h3 style="text-transform: uppercase;">Administración de Partidos</h3>
+<p style="color: rgba(245,240,232,0.6); font-size: 0.9rem;">
+    Esta pantalla permite gestionar los partidos del torneo.
+</p>
+
+<!-- Tabs -->
+<ul class="nav nav-tabs" style="margin-top: 1.5rem; border-bottom: 2px solid var(--color-gold);">
+    <li class="nav-item">
+        <a class="nav-link @(activeTab == "listar" ? "active" : "")" style="cursor: pointer; background-color: @(activeTab == "listar" ? "var(--color-gold)" : "transparent"); color: @(activeTab == "listar" ? "black" : "white"); font-weight: bold;" @onclick='() => SetActiveTab("listar")'>Ver Partidos</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link @(activeTab == "registrar" ? "active" : "")" style="cursor: pointer; background-color: @(activeTab == "registrar" ? "var(--color-gold)" : "transparent"); color: @(activeTab == "registrar" ? "black" : "white"); font-weight: bold;" @onclick='() => SetActiveTab("registrar")'>@(isEditing ? "Editar Partido" : "Registrar Partido")</a>
+    </li>
+</ul>
+
+<div class="card" style="margin-top: 1.5rem;">
+    <div class="card-body">
+        @if (activeTab == "listar")
+        {
+            <h4>Partidos Registrados</h4>
+            @if (partidos == null)
+            {
+                <p><em>Cargando...</em></p>
+            }
+            else
+            {
+                <table class="table table-dark table-hover" style="margin-top: 1rem;">
+                    <thead>
+                        <tr>
+                            <th style="color: var(--color-gold);">Código</th>
+                            <th style="color: var(--color-gold);">Local</th>
+                            <th style="color: var(--color-gold);">Visitante</th>
+                            <th style="color: var(--color-gold);">Fecha/Hora</th>
+                            <th style="color: var(--color-gold);">Estadio</th>
+                            <th style="color: var(--color-gold); text-align: center;">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var par in partidos)
+                        {
+                            <tr>
+                                <td>@par.Codigo</td>
+                                <td>@par.EquipoLocal</td>
+                                <td>@par.EquipoVisitante</td>
+                                <td>@par.FechaHora.ToString("g")</td>
+                                <td>@par.EstadioCodigo</td>
+                                <td style="text-align: center; display: flex; gap: 0.5rem; justify-content: center;">
+                                    <button class="btn btn-sm btn-warning" @onclick="() => EditarPartido(par)" title="Editar Partido">✏️</button>
+                                    <button class="btn btn-sm btn-danger" @onclick="() => EliminarPartido(par.Codigo)" title="Eliminar Partido">🗑️</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        }
+        else if (activeTab == "registrar")
+        {
+            <h4>@(isEditing ? "Editar Partido" : "Crear Nuevo Partido")</h4>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; margin-top: 1rem;">
+                <div class="form-group">
+                    <label style="display: block; font-size: 0.85rem; color: rgba(245,240,232,0.6); margin-bottom: 0.4rem;">Código:</label>
+                    <input @bind="currentPartido.Codigo" class="form-control" disabled="@isEditing" placeholder="Ej. PAR-01" />
+                </div>
+                <div class="form-group">
+                    <label style="display: block; font-size: 0.85rem; color: rgba(245,240,232,0.6); margin-bottom: 0.4rem;">Fecha y Hora:</label>
+                    <input type="datetime-local" @bind="currentPartido.FechaHora" class="form-control" />
+                </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div class="form-group">
+                    <label style="display: block; font-size: 0.85rem; color: rgba(245,240,232,0.6); margin-bottom: 0.4rem;">Equipo Local:</label>
+                    <input @bind="currentPartido.EquipoLocal" class="form-control" placeholder="Ej. México" />
+                </div>
+                <div class="form-group">
+                    <label style="display: block; font-size: 0.85rem; color: rgba(245,240,232,0.6); margin-bottom: 0.4rem;">Equipo Visitante:</label>
+                    <input @bind="currentPartido.EquipoVisitante" class="form-control" placeholder="Ej. Alemania" />
+                </div>
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label style="display: block; font-size: 0.85rem; color: rgba(245,240,232,0.6); margin-bottom: 0.4rem;">Código Estadio:</label>
+                <input @bind="currentPartido.EstadioCodigo" class="form-control" placeholder="Ej. EST-01" />
+            </div>
+            
+            <div style="display: flex; gap: 1rem;">
+                <button class="btn btn-primary" @onclick="GuardarPartido" style="flex: 1; padding: 0.8rem; font-weight: bold;">
+                    Guardar Partido
+                </button>
+                @if (isEditing)
+                {
+                    <button class="btn btn-secondary" @onclick="CancelarEdicion" style="padding: 0.8rem; font-weight: bold;">
+                        Cancelar
+                    </button>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private string activeTab = "listar";
+    private List<PartidoDto> partidos;
+    private PartidoDto currentPartido = new PartidoDto { FechaHora = DateTime.Now };
+    private bool isEditing = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarPartidos();
+    }
+
+    private void SetActiveTab(string tab)
+    {
+        activeTab = tab;
+        if (tab == "registrar" && !isEditing)
+        {
+            currentPartido = new PartidoDto { FechaHora = DateTime.Now };
+        }
+        else if (tab == "listar")
+        {
+            CancelarEdicion();
+        }
+    }
+
+    private async Task CargarPartidos()
+    {
+        var result = await PartidoService.ListarPartidosAsync(AuthState.Token);
+        partidos = result.ToList();
+    }
+
+    private async Task GuardarPartido()
+    {
+        if (isEditing)
+        {
+            await PartidoService.ActualizarPartidoAsync(AuthState.Token, currentPartido);
+        }
+        else
+        {
+            await PartidoService.CrearPartidoAsync(AuthState.Token, currentPartido);
+        }
+        await CargarPartidos();
+        CancelarEdicion();
+        SetActiveTab("listar");
+    }
+
+    private void EditarPartido(PartidoDto par)
+    {
+        currentPartido = new PartidoDto
+        {
+            Codigo = par.Codigo,
+            EquipoLocal = par.EquipoLocal,
+            EquipoVisitante = par.EquipoVisitante,
+            FechaHora = par.FechaHora,
+            EstadioCodigo = par.EstadioCodigo
+        };
+        isEditing = true;
+        SetActiveTab("registrar");
+    }
+
+    private async Task EliminarPartido(string codigo)
+    {
+        await PartidoService.EliminarPartidoAsync(AuthState.Token, codigo);
+        await CargarPartidos();
+    }
+
+    private void CancelarEdicion()
+    {
+        currentPartido = new PartidoDto { FechaHora = DateTime.Now };
+        isEditing = false;
+    }
+}

@@ -1,0 +1,241 @@
+@page "/login"
+@using ec.edu.monster.TicketClient.State
+@using AuthService
+@inject AuthServiceClient AuthService
+@inject AuthState AuthState
+@inject NavigationManager NavManager
+
+<div class="login-container">
+    <div class="login-header">
+        <div style="width: 200px; height: 200px; border-radius: 50%; overflow: hidden; border: 2px solid var(--color-gold); margin-bottom: 1rem; box-shadow: 0 4px 15px rgba(200, 169, 81, 0.3);">
+            <img src="/images/sulli_analitico.jpeg" alt="Sullivan Login" style="width: 100%; height: 100%; object-fit: cover; object-position: center;" />
+        </div>
+        <h2 style="color: var(--color-white); font-weight: 700; margin-bottom: 0.5rem; letter-spacing: 0.02em;">
+            @(debeCambiarPassword ? "Activar Cuenta" : "Iniciar Sesión")
+        </h2>
+        <p style="color: rgba(245,240,232,0.6); font-size: 0.85rem; font-family: var(--font-body);">
+            @(debeCambiarPassword ? "Establece una contraseña segura para continuar" : "Ingresa tus credenciales para acceder")
+        </p>
+    </div>
+
+    <div class="card login-card">
+        <div class="card-body" style="padding: 2rem;">
+            @if (!debeCambiarPassword)
+            {
+                <div style="margin-bottom: 1.2rem;">
+                    <label style="display: block; font-size: 0.8rem; color: rgba(245,240,232,0.6); margin-bottom: 0.4rem;">Correo Electrónico</label>
+                    <input @bind="email" type="email" placeholder="ej. usuario@correo.com" class="form-control" style="width: 100%; background: rgba(10,22,40,0.4); color: #F5F0E8; border: 1px solid rgba(200,169,81,0.2); padding: 0.75rem; border-radius: 8px;" />
+                </div>
+
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; font-size: 0.8rem; color: rgba(245,240,232,0.6); margin-bottom: 0.4rem;">Contraseña</label>
+                    <input @bind="password" type="password" placeholder="Ingresa tu contraseña" class="form-control" style="width: 100%; background: rgba(10,22,40,0.4); color: #F5F0E8; border: 1px solid rgba(200,169,81,0.2); padding: 0.75rem; border-radius: 8px;" />
+                </div>
+
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div style="background: rgba(211,47,47,0.15); border: 1px solid rgba(211,47,47,0.3); border-radius: 8px; padding: 0.8rem 1rem; margin-bottom: 1.2rem; text-align: center;">
+                        <span style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--color-referee);">@errorMessage</span>
+                    </div>
+                }
+
+                <button class="btn btn-primary" style="width: 100%; padding: 0.8rem; border-radius: 12px; font-weight: 700; font-size: 0.95rem;" @onclick="ProcesarLogin" disabled="@isLoading">
+                    @(isLoading ? "Cargando..." : "INICIAR SESIÓN")
+                </button>
+                
+                <div style="text-align:center; margin-top:1.5rem; font-size:0.85rem; color:rgba(245,240,232,0.6);">
+                    ¿No tienes una cuenta? <a href="/crear-cuenta" style="color:var(--color-gold); font-weight:bold; text-decoration:none;">Crea una ahora</a>
+                </div>
+            }
+            else
+            {
+                <div style="margin-bottom: 1.2rem;">
+                    <label style="display: block; font-size: 0.8rem; color: rgba(245,240,232,0.6); margin-bottom: 0.4rem;">Nueva Contraseña</label>
+                    <input @bind="nuevaPassword" type="password" placeholder="Ingresa una nueva contraseña" class="form-control" style="width: 100%; background: rgba(10,22,40,0.4); color: #F5F0E8; border: 1px solid rgba(200,169,81,0.2); padding: 0.75rem; border-radius: 8px;" />
+                </div>
+
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; font-size: 0.8rem; color: rgba(245,240,232,0.6); margin-bottom: 0.4rem;">Confirmar Contraseña</label>
+                    <input @bind="confirmarPassword" type="password" placeholder="Confirma tu contraseña" class="form-control" style="width: 100%; background: rgba(10,22,40,0.4); color: #F5F0E8; border: 1px solid rgba(200,169,81,0.2); padding: 0.75rem; border-radius: 8px;" />
+                </div>
+
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div style="background: rgba(211,47,47,0.15); border: 1px solid rgba(211,47,47,0.3); border-radius: 8px; padding: 0.8rem 1rem; margin-bottom: 1.2rem; text-align: center;">
+                        <span style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--color-referee);">@errorMessage</span>
+                    </div>
+                }
+
+                <button class="btn btn-primary" style="width: 100%; padding: 0.8rem; border-radius: 12px; font-weight: 700; font-size: 0.95rem; margin-bottom:0.5rem;" @onclick="ProcesarCambioPassword" disabled="@isLoading">
+                    @(isLoading ? "Cargando..." : "GUARDAR Y ENTRAR")
+                </button>
+                <button class="btn btn-outline" style="width: 100%; padding: 0.8rem; border-radius: 12px; font-weight: 700; font-size: 0.95rem;" @onclick="() => { debeCambiarPassword = false; errorMessage = string.Empty; }" disabled="@isLoading">
+                    CANCELAR
+                </button>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .login-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding-top: 3rem;
+        width: 100%;
+        max-width: 420px;
+        margin: 0 auto;
+    }
+
+    .login-header {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .icon-circle {
+        background: rgba(245,240,232,0.1);
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1rem;
+    }
+
+    .login-card {
+        width: 100%;
+        border-radius: 16px;
+        background: var(--color-card-bg);
+        border: 1px solid var(--color-card-border);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+</style>
+
+@code {
+    [SupplyParameterFromQuery(Name = "message")]
+    public string? QueryMessage { get; set; }
+
+    private string email = "";
+    private string cedula = "";
+    private string password = "";
+    private string errorMessage = "";
+    private bool isLoading = false;
+    
+    protected override void OnInitialized()
+    {
+        if (!string.IsNullOrEmpty(QueryMessage))
+        {
+            errorMessage = QueryMessage;
+        }
+    }
+    
+    private bool debeCambiarPassword = false;
+    private string nuevaPassword = "";
+    private string confirmarPassword = "";
+
+    private async Task ProcesarLogin()
+    {
+        errorMessage = "";
+
+        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
+        {
+            errorMessage = "Ingresa tu correo y contraseña.";
+            return;
+        }
+
+        isLoading = true;
+
+        try
+        {
+            var request = new LoginRequest
+            {
+                Email = email.Trim(),
+                Password = password
+            };
+
+            var response = await AuthService.LoginAsync(request);
+
+            if (response.Exitoso)
+            {
+                AuthState.Login(response.SessionToken, response.Cedula, response.Nombre, response.Rol);
+                NavManager.NavigateTo("/");
+            }
+            else if (response.DebeCambiarPassword)
+            {
+                cedula = response.Cedula;
+                debeCambiarPassword = true;
+                errorMessage = "";
+            }
+            else
+            {
+                errorMessage = response.Mensaje;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error de conexión: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task ProcesarCambioPassword()
+    {
+        errorMessage = "";
+
+        if (string.IsNullOrWhiteSpace(nuevaPassword) || string.IsNullOrWhiteSpace(confirmarPassword))
+        {
+            errorMessage = "Ambos campos son obligatorios.";
+            return;
+        }
+        if (nuevaPassword != confirmarPassword)
+        {
+            errorMessage = "Las contraseñas no coinciden.";
+            return;
+        }
+        if (nuevaPassword.Length < 6)
+        {
+            errorMessage = "La contraseña debe tener al menos 6 caracteres.";
+            return;
+        }
+
+        isLoading = true;
+
+        try
+        {
+            var req = new CambiarPasswordRequest
+            {
+                Cedula = cedula.Trim(),
+                NuevaPassword = nuevaPassword
+            };
+
+            var response = await AuthService.CambiarPasswordPrimeraVezAsync(req);
+
+            if (response.Exitoso)
+            {
+                AuthState.Login(response.SessionToken, response.Cedula, response.Nombre, response.Rol);
+                NavManager.NavigateTo("/");
+            }
+            else
+            {
+                errorMessage = response.Mensaje;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al cambiar contraseña: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

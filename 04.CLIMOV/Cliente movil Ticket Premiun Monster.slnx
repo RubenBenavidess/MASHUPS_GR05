@@ -1,0 +1,10 @@
+<Solution>
+  <Project Path="../04.CLICON/TicketPremium.Console/TicketPremium.Console.csproj" />
+  <Project Path="../04.CLIESC/Cliente Escritorio Ticket Premium Monster/Cliente Escritorio Ticket Premium Monster.csproj">
+    <Deploy Solution="Debug|*" />
+  </Project>
+  <Project Path="../04.CLIWEB/Cliente Web Ticket Premium Monster/Cliente Web Ticket Premium Monster.csproj" />
+  <Project Path="Cliente movil Ticket Premiun Monster/Cliente movil Ticket Premiun Monster.csproj">
+    <Deploy Solution="Debug|*" />
+  </Project>
+</Solution>

@@ -101,7 +101,7 @@ namespace TicketPremium.Console.Servicios
                 if (y >= System.Console.WindowHeight) break;
                 System.Console.SetCursorPosition(inicioX, y);
                 var linea = lineas[i];
-                var maxLen = ancho - inicioX;
+                var maxLen = ancho - inicioX - 1;
                 if (linea.Length > maxLen)
                     linea = linea.Substring(0, maxLen);
                 System.Console.Write(linea);
@@ -113,6 +113,7 @@ namespace TicketPremium.Console.Servicios
 
         public static void MostrarEncabezado()
         {
+            if (System.OperatingSystem.IsWindows() && System.Console.WindowWidth < 140) { try { System.Console.WindowWidth = 140; } catch {} }
             System.Console.Clear();
             DibujarSulliDerecha();
             System.Console.SetCursorPosition(0, 0);
@@ -134,6 +135,7 @@ namespace TicketPremium.Console.Servicios
 
         public static void MostrarEncabezadoSinLimpiar()
         {
+            if (System.OperatingSystem.IsWindows() && System.Console.WindowWidth < 140) { try { System.Console.WindowWidth = 140; } catch {} }
             var (left, top) = System.Console.GetCursorPosition();
             DibujarSulliDerecha();
             System.Console.SetCursorPosition(0, 0);

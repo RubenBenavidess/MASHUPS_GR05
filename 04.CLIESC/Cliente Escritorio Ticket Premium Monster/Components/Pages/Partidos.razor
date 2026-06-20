@@ -1,0 +1,203 @@
+@page "/partidos"
+@using PartidoService
+@using ec.edu.monster.TicketClient.State
+@inject PartidoServiceClient PartidoClient
+@inject AuthState AuthState
+@inject NavigationManager NavManager
+
+<h1 style="margin-bottom:0.3rem;">Cat&#225;logo de Partidos</h1>
+<p style="font-family:var(--font-mono);font-size:0.8rem;color:rgba(245,240,232,0.4);margin-bottom:2rem;">MUNDIAL FIFA 2026 &#183; USA &#183; M&#201;XICO &#183; CANAD&#193;</p>
+
+@if (isLoading)
+{
+    <div class="loading-container">
+        <div class="loading-spinner"></div>
+        <p>Cargando partidos...</p>
+    </div>
+}
+else if (!listaPartidos.Any())
+{
+    <div class="empty-state">
+        <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
+            <circle cx="40" cy="40" r="30" stroke="#C8A951" stroke-width="1.5" opacity="0.3"/>
+            <path d="M40 25 L40 55 M25 40 L55 40 M30 30 L50 50 M50 30 L30 50" stroke="#C8A951" stroke-width="0.6" opacity="0.3"/>
+            <circle cx="40" cy="40" r="8" stroke="#C8A951" stroke-width="1" opacity="0.3"/>
+        </svg>
+        <h3>Sin partidos disponibles</h3>
+        <p>Vuelve pronto para nuevos encuentros del Mundial 2026.</p>
+    </div>
+}
+else
+{
+    <div class="matches-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:1.5rem;">
+        @foreach (var partido in listaPartidos)
+        {
+            <div class="card match-card animate-in">
+                <div class="card-body">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;margin-bottom:1rem;">
+                        <div style="display:flex;flex-direction:column;align-items:center;gap:0.3rem;flex:1;">
+                            <img src="@GetFlagUrl(partido.EquipoLocal)" alt="@partido.EquipoLocal" style="width:48px;height:32px;object-fit:cover;border-radius:4px;border:1px solid rgba(255,255,255,0.2);" />
+                            <span style="font-family:var(--font-display);font-weight:600;font-size:0.95rem;letter-spacing:0.02em;text-align:center;color:white;">@partido.EquipoLocal</span>
+                        </div>
+
+                        <div style="display:flex;flex-direction:column;align-items:center;gap:0.2rem;">
+                            <span style="font-family:var(--font-display);font-size:1.5rem;font-weight:700;color:var(--color-gold);">VS</span>
+                            <span style="font-family:var(--font-mono);font-size:0.65rem;color:rgba(245,240,232,0.4);">FIFA</span>
+                        </div>
+
+                        <div style="display:flex;flex-direction:column;align-items:center;gap:0.3rem;flex:1;">
+                            <img src="@GetFlagUrl(partido.EquipoVisitante)" alt="@partido.EquipoVisitante" style="width:48px;height:32px;object-fit:cover;border-radius:4px;border:1px solid rgba(255,255,255,0.2);" />
+                            <span style="font-family:var(--font-display);font-weight:600;font-size:0.95rem;letter-spacing:0.02em;text-align:center;color:white;">@partido.EquipoVisitante</span>
+                        </div>
+                    </div>
+
+                    <hr style="margin:0.75rem 0;" />
+
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+                        <div>
+                            <div style="font-family:var(--font-display);font-size:0.85rem;letter-spacing:0.03em;color:var(--color-gold);">@GetEstadioNombre(partido.EstadioCodigo)</div>
+                            <div style="font-family:var(--font-mono);font-size:0.75rem;color:rgba(245,240,232,0.4);">@GetEstadioCiudad(partido.EstadioCodigo)</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-family:var(--font-mono);font-size:0.8rem;color:rgba(245,240,232,0.7);">
+                                @partido.FechaHora.ToString("dd MMM", new System.Globalization.CultureInfo("es-MX"))
+                            </div>
+                            <div style="font-family:var(--font-mono);font-size:0.7rem;color:rgba(245,240,232,0.4);">
+                                @partido.FechaHora.ToString("HH:mm") hrs
+                            </div>
+                        </div>
+                    </div>
+
+                    @if (partido.FechaHora < DateTime.Now)
+                    {
+                        <button class="btn" style="width:100%;margin-top:0.75rem;background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.5);cursor:not-allowed;border:1px solid rgba(255,255,255,0.05);" disabled>
+                            Evento finalizado
+                        </button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-primary" style="width:100%;margin-top:0.75rem;"
+                                @onclick="() => VerLocalidades(partido.Codigo)">
+                            Ver Asientos
+                        </button>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private PartidoDto[] listaPartidos = Array.Empty<PartidoDto>();
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var token = string.IsNullOrEmpty(AuthState?.Token) ? "" : AuthState.Token;
+            var partidos = await PartidoClient.ListarPartidosAsync(token);
+            var now = DateTime.Now;
+            listaPartidos = partidos
+                .OrderBy(p => p.FechaHora < now ? 1 : 0) // Vencidos al final
+                .ThenBy(p => p.FechaHora)
+                .ToArray();
+        }
+        catch
+        {
+            listaPartidos = Array.Empty<PartidoDto>();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void VerLocalidades(string codigoPartido)
+    {
+        if (!AuthState.IsLoggedIn)
+        {
+            NavManager.NavigateTo("/login?message=Para poder comprar, debes iniciar sesión");
+            return;
+        }
+        NavManager.NavigateTo($"/seleccion-asientos/{codigoPartido}");
+    }
+
+    private static string GetFlagUrl(string equipo)
+    {
+        var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            {"Mexico", "mx"}, {"Estados Unidos", "us"}, {"EE. UU.", "us"}, {"Canada", "ca"},
+            {"Argentina", "ar"}, {"Brasil", "br"}, {"Uruguay", "uy"}, {"Colombia", "co"}, {"Ecuador", "ec"},
+            {"Paraguay", "py"}, {"Francia", "fr"}, {"Alemania", "de"}, {"Espana", "es"}, {"Inglaterra", "gb-eng"},
+            {"Paises Bajos", "nl"}, {"Portugal", "pt"}, {"Belgica", "be"}, {"Croacia", "hr"}, {"Italia", "it"},
+            {"Suiza", "ch"}, {"Suecia", "se"}, {"Noruega", "no"}, {"Escocia", "gb-sct"}, {"Bosnia y Herzegovina", "ba"},
+            {"Chequia", "cz"}, {"Bosnia y Herz.", "ba"}, {"Gales", "gb-wls"}, {"Austria", "at"},
+            {"Marruecos", "ma"}, {"Senegal", "sn"}, {"Egipto", "eg"}, {"Argelia", "dz"}, {"Costa de Marfil", "ci"},
+            {"Tunez", "tn"}, {"Sudafrica", "za"}, {"Ghana", "gh"}, {"RD Congo", "cd"}, {"Cabo Verde", "cv"},
+            {"Japon", "jp"}, {"Corea del Sur", "kr"}, {"Arabia Saudita", "sa"}, {"Iran", "ir"}, {"Australia", "au"},
+            {"Uzbekistan", "uz"}, {"Irak", "iq"}, {"Jordania", "jo"}, {"Qatar", "qa"}, {"Turkiye", "tr"},
+            {"Nueva Zelanda", "nz"}, {"Haiti", "ht"}, {"Panama", "pa"}, {"Curazao", "cw"},
+            {"Costa Rica", "cr"}, {"Honduras", "hn"}, {"Jamaica", "jm"}, {"Peru", "pe"}, {"Chile", "cl"},
+            {"Bolivia", "bo"}, {"Venezuela", "ve"}, {"Dinamarca", "dk"}, {"Polonia", "pl"}, {"Rumania", "ro"},
+            {"Serbia", "rs"}, {"Grecia", "gr"}, {"Hungria", "hu"}, {"Eslovaquia", "sk"}, {"Eslovenia", "si"},
+            {"Finlandia", "fi"}, {"Islandia", "is"}, {"Irlanda", "ie"}, {"Camerun", "cm"}, {"Nigeria", "ng"},
+            {"Mali", "ml"}, {"Burkina Faso", "bf"}, {"Mozambique", "mz"}, {"Tanzania", "tz"},
+            {"China", "cn"}, {"India", "in"}, {"Indonesia", "id"}, {"Tailandia", "th"}, {"Vietnam", "vn"},
+            {"Palestina", "ps"}, {"Siria", "sy"}, {"Libano", "lb"}, {"Oman", "om"},
+            {"Emiratos Arabes Unidos", "ae"}, {"Bahrain", "bh"}, {"Kuwait", "kw"}
+        };
+
+        // Normalize: remove diacritics so "Mexico" matches "Mexico", "Sudafrica" matches "Sudafrica", etc.
+        string equipoNorm = new string(equipo.Normalize(System.Text.NormalizationForm.FormD)
+            .Where(c => System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c) != System.Globalization.UnicodeCategory.NonSpacingMark)
+            .ToArray());
+
+        if (dict.TryGetValue(equipoNorm.Trim(), out var code))
+            return $"https://flagcdn.com/w80/{code}.png";
+
+        return "https://flagcdn.com/w80/un.png";
+    }
+
+    private static string GetEstadioNombre(string codigo) => codigo switch
+    {
+        "EST-001" => "MetLife Stadium",
+        "EST-002" => "AT&T Stadium",
+        "EST-003" => "Arrowhead Stadium",
+        "EST-004" => "NRG Stadium",
+        "EST-005" => "Mercedes-Benz Stadium",
+        "EST-006" => "SoFi Stadium",
+        "EST-007" => "Lincoln Financial Field",
+        "EST-008" => "Lumen Field",
+        "EST-009" => "Levi's Stadium",
+        "EST-010" => "Gillette Stadium",
+        "EST-011" => "Hard Rock Stadium",
+        "EST-012" => "Estadio Azteca",
+        "EST-013" => "Estadio BBVA",
+        "EST-014" => "Estadio Akron",
+        "EST-015" => "BC Place",
+        "EST-016" => "BMO Field",
+        _ => codigo,
+    };
+
+    private static string GetEstadioCiudad(string codigo) => codigo switch
+    {
+        "EST-001" => "Nueva York/Nueva Jersey",
+        "EST-002" => "Dallas",
+        "EST-003" => "Kansas City",
+        "EST-004" => "Houston",
+        "EST-005" => "Atlanta",
+        "EST-006" => "Los Angeles",
+        "EST-007" => "Filadelfia",
+        "EST-008" => "Seattle",
+        "EST-009" => "Area de la Bahia de San Francisco",
+        "EST-010" => "Boston",
+        "EST-011" => "Miami",
+        "EST-012" => "Ciudad de Mexico",
+        "EST-013" => "Monterrey",
+        "EST-014" => "Guadalajara",
+        "EST-015" => "Vancouver",
+        "EST-016" => "Toronto",
+        _ => "Desconocida",
+    };
+}

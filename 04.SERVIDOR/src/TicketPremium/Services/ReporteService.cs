@@ -26,11 +26,38 @@ public class ReporteService : IReporteService
 
     public async Task<List<ResumenClienteDto>> ResumenVentasPorCliente(string sessionToken, string cedulaCliente)
     {
-        RequerirAdmin(sessionToken);
+        if (!AuthService.EsClienteValido(sessionToken, out var cedulaToken))
+            throw new FaultException(new FaultReason("Acceso denegado. Sesión inválida."), new FaultCode("AccesoDenegado"));
+            
+        if (!AuthService.EsAdmin(sessionToken) && cedulaToken != cedulaCliente)
+            throw new FaultException(new FaultReason("Acceso denegado. No puedes ver compras de otro usuario."), new FaultCode("AccesoDenegado"));
+
         var result = await _db.DetallesFactura
             .Where(d => d.Factura.ClienteCedula == cedulaCliente)
             .Include(d => d.Factura).Include(d => d.Asiento).ThenInclude(a => a.Partido).Include(d => d.Asiento).ThenInclude(a => a.Localidad)
             .Select(d => new ResumenClienteDto { NumeroFactura = d.FacturaNumero, Fecha = d.Factura.Fecha, Partido = d.Asiento.Partido.EquipoLocal + " vs " + d.Asiento.Partido.EquipoVisitante, Asiento = d.AsientoCodigo, Localidad = d.Asiento.Localidad.Descripcion, PrecioUnitario = d.PrecioUnitario, MetodoPago = d.Factura.MetodoPago })
+            .ToListAsync();
+        return result;
+    }
+
+    public async Task<List<DetalleVentaAsientoDto>> DetallesVentasPorPartido(string sessionToken, string codigoPartido)
+    {
+        RequerirAdmin(sessionToken);
+        var result = await _db.DetallesFactura
+            .Where(d => d.Asiento.PartidoCodigo == codigoPartido && d.Asiento.Estado == "VENDIDO")
+            .Include(d => d.Asiento)
+            .Include(d => d.Factura).ThenInclude(f => f.Cliente)
+            .Select(d => new DetalleVentaAsientoDto
+            {
+                NumeroFactura = d.FacturaNumero,
+                CodigoAsiento = d.AsientoCodigo,
+                Fila = d.Asiento.Fila,
+                Numero = d.Asiento.Numero,
+                CedulaCliente = d.Factura.ClienteCedula,
+                NombreCliente = d.Factura.Cliente.Nombre,
+                ApellidoCliente = d.Factura.Cliente.Apellido,
+                FechaCompra = d.Factura.Fecha
+            })
             .ToListAsync();
         return result;
     }

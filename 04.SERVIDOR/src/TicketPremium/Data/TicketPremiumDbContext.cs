@@ -127,7 +127,7 @@ public class TicketPremiumDbContext : DbContext
                   .IsRequired();
         });
 
-        SeedData(modelBuilder);
+        // SeedData(modelBuilder); // Desactivado para permitir scripts manuales
     }
 
     private static void SeedData(ModelBuilder modelBuilder)

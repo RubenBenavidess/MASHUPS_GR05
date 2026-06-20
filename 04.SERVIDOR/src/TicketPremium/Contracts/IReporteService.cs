@@ -44,6 +44,34 @@ public class ResumenClienteDto
     public string MetodoPago { get; set; } = string.Empty;
 }
 
+[DataContract]
+    public class DetalleVentaAsientoDto
+{
+    [DataMember]
+    public string NumeroFactura { get; set; } = string.Empty;
+
+    [DataMember]
+    public string CodigoAsiento { get; set; } = string.Empty;
+
+    [DataMember]
+    public string Fila { get; set; } = string.Empty;
+
+    [DataMember]
+    public int Numero { get; set; }
+
+    [DataMember]
+    public string CedulaCliente { get; set; } = string.Empty;
+
+    [DataMember]
+    public string NombreCliente { get; set; } = string.Empty;
+
+    [DataMember]
+    public string ApellidoCliente { get; set; } = string.Empty;
+
+    [DataMember]
+    public DateTime FechaCompra { get; set; }
+}
+
 [ServiceContract]
 public interface IReporteService
 {
@@ -52,4 +80,8 @@ public interface IReporteService
 
     [OperationContract]
     Task<List<ResumenClienteDto>> ResumenVentasPorCliente(string sessionToken, string cedulaCliente);
+
+    [OperationContract]
+    Task<List<DetalleVentaAsientoDto>> DetallesVentasPorPartido(string sessionToken, string codigoPartido);
 }
+

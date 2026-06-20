@@ -5,6 +5,7 @@ using PartidoService;
 using ClienteService;
 using FacturaService;
 using ReporteService;
+using BancoAdminService;
 
 namespace TicketPremium.Console.Servicios
 {
@@ -16,6 +17,8 @@ namespace TicketPremium.Console.Servicios
         private readonly ClienteServiceClient? _clienteClient;
         private readonly FacturaServiceClient? _facturaClient;
         private readonly ReporteServiceClient? _reporteClient;
+        private readonly EstadioServiceClient? _estadioClient;
+        private readonly BancoAdminServiceClient? _bancoAdminClient;
 
         public bool BackendDisponible { get; }
 
@@ -23,12 +26,22 @@ namespace TicketPremium.Console.Servicios
         {
             try
             {
-                _paisClient = new PaisServiceClient();
-                _localidadClient = new LocalidadServiceClient();
-                _partidoClient = new PartidoServiceClient();
-                _clienteClient = new ClienteServiceClient();
-                _facturaClient = new FacturaServiceClient();
-                _reporteClient = new ReporteServiceClient();
+                _paisClient = WcfHelper.CreatePaisServiceClient();
+            _paisClient.Endpoint.EndpointBehaviors.Add(new SessionTokenInspector(() => Program.SessionToken));
+                _localidadClient = WcfHelper.CreateLocalidadServiceClient();
+            _localidadClient.Endpoint.EndpointBehaviors.Add(new SessionTokenInspector(() => Program.SessionToken));
+                _partidoClient = WcfHelper.CreatePartidoServiceClient();
+            _partidoClient.Endpoint.EndpointBehaviors.Add(new SessionTokenInspector(() => Program.SessionToken));
+                _clienteClient = WcfHelper.CreateClienteServiceClient();
+            _clienteClient.Endpoint.EndpointBehaviors.Add(new SessionTokenInspector(() => Program.SessionToken));
+                _facturaClient = WcfHelper.CreateFacturaServiceClient();
+            _facturaClient.Endpoint.EndpointBehaviors.Add(new SessionTokenInspector(() => Program.SessionToken));
+                _reporteClient = WcfHelper.CreateReporteServiceClient();
+            _reporteClient.Endpoint.EndpointBehaviors.Add(new SessionTokenInspector(() => Program.SessionToken));
+                _estadioClient = WcfHelper.CreateEstadioServiceClient();
+            _estadioClient.Endpoint.EndpointBehaviors.Add(new SessionTokenInspector(() => Program.SessionToken));
+                _bancoAdminClient = WcfHelper.CreateBancoAdminServiceClient();
+            _bancoAdminClient.Endpoint.EndpointBehaviors.Add(new SessionTokenInspector(() => Program.SessionToken));
                 BackendDisponible = true;
             }
             catch
@@ -188,7 +201,7 @@ namespace TicketPremium.Console.Servicios
             if (_partidoClient == null) { SinBackend(); return; }
             ConsoleUI.MostrarEncabezado();
             MostrarTitulo("LISTA DE PARTIDOS");
-            var partidos = await _partidoClient.ListarPartidosAsync();
+            var partidos = await _partidoClient.ListarPartidosAsync(Program.SessionToken);
             foreach (var p in partidos)
                 ConsoleUI.EscribirLinea($"  {p.Codigo,-10} {p.EquipoLocal,-20} vs {p.EquipoVisitante,-20} {p.FechaHora:dd/MMM/yyyy HH:mm}  {p.EstadioCodigo}", ConsoleColor.White);
             System.Console.WriteLine();
@@ -201,7 +214,7 @@ namespace TicketPremium.Console.Servicios
             ConsoleUI.MostrarEncabezado();
             MostrarTitulo("BUSCAR PARTIDO");
             var codigo = ConsoleUI.LeerTexto("  Codigo del partido: ");
-            var p = await _partidoClient.ObtenerPartidoAsync(codigo);
+            var p = await _partidoClient.ObtenerPartidoAsync(Program.SessionToken, codigo);
             ConsoleUI.EscribirLinea($"  Codigo: {p.Codigo}", ConsoleColor.White);
             ConsoleUI.EscribirLinea($"  Equipos: {p.EquipoLocal} vs {p.EquipoVisitante}", ConsoleColor.White);
             ConsoleUI.EscribirLinea($"  Fecha: {p.FechaHora:dd/MMM/yyyy HH:mm}", ConsoleColor.White);
@@ -532,11 +545,39 @@ namespace TicketPremium.Console.Servicios
             ConsoleUI.MostrarEncabezado();
             MostrarTitulo("VENTAS POR PARTIDO");
             var codigo = ConsoleUI.LeerTexto("  Codigo del partido: ");
-            var resumen = await _reporteClient.ResumenVentasPorPartidoAsync(codigo);
+
+            if (_partidoClient != null)
+            {
+                try
+                {
+                    var partido = await _partidoClient.ObtenerPartidoAsync(Program.SessionToken, codigo);
+                    if (partido != null && !string.IsNullOrEmpty(partido.Codigo))
+                    {
+                        ConsoleUI.EscribirLinea($"  Encuentro: {partido.EquipoLocal} vs {partido.EquipoVisitante}", ConsoleColor.Yellow);
+                        System.Console.WriteLine();
+                    }
+                }
+                catch { /* Ignorar error de partido */ }
+            }
+
+            var resumen = await _reporteClient.ResumenVentasPorPartidoAsync(Program.SessionToken, codigo);
+            decimal totalGeneral = 0;
             foreach (var r in resumen)
-                ConsoleUI.EscribirLinea($"  {r.DescripcionLocalidad,-15} Vendidos: {r.BoletosVendidos,-5} Recaudado: ${r.TotalRecaudado,8:F0}", ConsoleColor.White);
+            {
+                ConsoleUI.EscribirLinea($"  {r.DescripcionLocalidad,-25} Vendidos: {r.BoletosVendidos,-5} Recaudado: ${r.TotalRecaudado,8:F0}", ConsoleColor.White);
+                totalGeneral += r.TotalRecaudado;
+            }
+
             if (resumen.Length == 0)
+            {
                 ConsoleUI.EscribirLinea("  Sin ventas registradas para este partido.", ConsoleColor.DarkGray);
+            }
+            else
+            {
+                System.Console.WriteLine();
+                ConsoleUI.EscribirLinea($"  Total Recaudado en el Partido: ${totalGeneral:F0}", ConsoleColor.Green);
+            }
+
             System.Console.WriteLine();
             ConsoleUI.Pausa();
         }
@@ -547,7 +588,7 @@ namespace TicketPremium.Console.Servicios
             ConsoleUI.MostrarEncabezado();
             MostrarTitulo("VENTAS POR CLIENTE");
             var cedula = ConsoleUI.LeerTexto("  Cedula del cliente: ");
-            var resumen = await _reporteClient.ResumenVentasPorClienteAsync(cedula);
+            var resumen = await _reporteClient.ResumenVentasPorClienteAsync(Program.SessionToken, cedula);
             foreach (var r in resumen)
                 ConsoleUI.EscribirLinea($"  {r.NumeroFactura,-20} {r.Fecha:dd/MMM/yyyy}  {r.Partido,-25} {r.Asiento,-14} {r.Localidad,-10} ${r.PrecioUnitario,6:F0}  {r.MetodoPago}", ConsoleColor.White);
             if (resumen.Length == 0)
@@ -587,16 +628,333 @@ namespace TicketPremium.Console.Servicios
         // ========================
         public async Task<bool> ValidarClienteExiste(string cedula)
         {
-            if (_clienteClient == null) return true; // sin backend, no se puede validar
+            if (_clienteClient == null) return false;
             try
             {
-                await _clienteClient.ObtenerClienteAsync(cedula);
-                return true;
+                var cli = await _clienteClient.ObtenerClienteAsync(cedula);
+                return cli != null && cli.Cedula == cedula;
             }
             catch
             {
                 return false;
             }
+        }
+
+        public async Task CrudEstadios()
+        {
+            while (true)
+            {
+                ConsoleUI.MostrarEncabezado();
+                MostrarTitulo("ADMINISTRACION DE ESTADIOS");
+                ConsoleUI.EscribirLinea("  [1] Listar Estadios", ConsoleColor.White);
+                ConsoleUI.EscribirLinea("  [2] Buscar Estadio", ConsoleColor.White);
+                ConsoleUI.EscribirLinea("  [3] Crear Estadio", ConsoleColor.White);
+                ConsoleUI.EscribirLinea("  [4] Actualizar Estadio", ConsoleColor.White);
+                ConsoleUI.EscribirLinea("  [5] Eliminar Estadio", ConsoleColor.White);
+                ConsoleUI.EscribirLinea("  [0] Volver", ConsoleColor.DarkGray);
+                System.Console.WriteLine();
+                var op = ConsoleUI.LeerOpcion(0, 5);
+                if (op == 0) return;
+                
+                try
+                {
+                    switch (op)
+                    {
+                        case 1: await ListarEstadios(); break;
+                        case 2: await BuscarEstadio(); break;
+                        case 3: await CrearEstadio(); break;
+                        case 4: await ActualizarEstadio(); break;
+                        case 5: await EliminarEstadio(); break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ConsoleUI.EscribirLinea($"  ERROR: {ex.Message}", ConsoleColor.Red);
+                    ConsoleUI.Pausa();
+                }
+            }
+        }
+
+        async Task ListarEstadios()
+        {
+            if (_estadioClient == null) { SinBackend(); return; }
+            ConsoleUI.MostrarEncabezado();
+            MostrarTitulo("LISTA DE ESTADIOS");
+            var estadios = await _estadioClient.ListarEstadiosAsync(Program.SessionToken);
+            if (estadios != null && estadios.Length > 0)
+            {
+                foreach (var e in estadios)
+                    ConsoleUI.EscribirLinea($"  {e.Codigo,-10} {e.Nombre,-30} {e.Ciudad,-20} {e.CapacidadTotal} ({e.PaisCodigo})", ConsoleColor.White);
+            }
+            else
+            {
+                ConsoleUI.EscribirLinea("  No hay estadios registrados.", ConsoleColor.DarkGray);
+            }
+            System.Console.WriteLine();
+            ConsoleUI.Pausa();
+        }
+
+        async Task BuscarEstadio()
+        {
+            if (_estadioClient == null) { SinBackend(); return; }
+            ConsoleUI.MostrarEncabezado();
+            MostrarTitulo("BUSCAR ESTADIO");
+            var codigo = ConsoleUI.LeerTexto("  Codigo del estadio: ");
+            var e = await _estadioClient.ObtenerEstadioAsync(Program.SessionToken, codigo);
+            if (e != null && !string.IsNullOrEmpty(e.Codigo))
+            {
+                ConsoleUI.EscribirLinea($"  Codigo: {e.Codigo}", ConsoleColor.White);
+                ConsoleUI.EscribirLinea($"  Nombre: {e.Nombre}", ConsoleColor.White);
+                ConsoleUI.EscribirLinea($"  Ciudad: {e.Ciudad}", ConsoleColor.White);
+                ConsoleUI.EscribirLinea($"  Pais: {e.PaisCodigo}", ConsoleColor.White);
+                ConsoleUI.EscribirLinea($"  Capacidad: {e.CapacidadTotal}", ConsoleColor.White);
+            }
+            else
+            {
+                ConsoleUI.EscribirLinea("  Estadio no encontrado.", ConsoleColor.Red);
+            }
+            ConsoleUI.Pausa();
+        }
+
+        async Task CrearEstadio()
+        {
+            if (_estadioClient == null) { SinBackend(); return; }
+            ConsoleUI.MostrarEncabezado();
+            MostrarTitulo("CREAR ESTADIO");
+            var codigo = ConsoleUI.LeerTexto("  Codigo: ");
+            var nombre = ConsoleUI.LeerTexto("  Nombre: ");
+            var ciudad = ConsoleUI.LeerTexto("  Ciudad: ");
+            var pais = ConsoleUI.LeerTexto("  Codigo Pais (ej. ECU): ");
+            var capStr = ConsoleUI.LeerTexto("  Capacidad Total: ");
+            if (int.TryParse(capStr, out int capacidad))
+            {
+                await _estadioClient.CrearEstadioAsync(Program.SessionToken, new EstadioService.EstadioDto 
+                { 
+                    Codigo = codigo, 
+                    Nombre = nombre, 
+                    Ciudad = ciudad, 
+                    PaisCodigo = pais, 
+                    CapacidadTotal = capacidad 
+                });
+                ConsoleUI.EscribirLinea("  Estadio creado exitosamente.", ConsoleColor.Green);
+            }
+            else
+            {
+                ConsoleUI.EscribirLinea("  Capacidad invalida.", ConsoleColor.Red);
+            }
+            ConsoleUI.Pausa();
+        }
+
+        async Task ActualizarEstadio()
+        {
+            if (_estadioClient == null) { SinBackend(); return; }
+            ConsoleUI.MostrarEncabezado();
+            MostrarTitulo("ACTUALIZAR ESTADIO");
+            var codigo = ConsoleUI.LeerTexto("  Codigo del estadio a actualizar: ");
+            var e = await _estadioClient.ObtenerEstadioAsync(Program.SessionToken, codigo);
+            if (e == null || string.IsNullOrEmpty(e.Codigo))
+            {
+                ConsoleUI.EscribirLinea("  Estadio no encontrado.", ConsoleColor.Red);
+                ConsoleUI.Pausa();
+                return;
+            }
+            
+            var nombre = ConsoleUI.LeerTexto($"  Nuevo Nombre ({e.Nombre}): ");
+            var ciudad = ConsoleUI.LeerTexto($"  Nueva Ciudad ({e.Ciudad}): ");
+            var pais = ConsoleUI.LeerTexto($"  Nuevo Pais ({e.PaisCodigo}): ");
+            var capStr = ConsoleUI.LeerTexto($"  Nueva Capacidad ({e.CapacidadTotal}): ");
+            
+            e.Nombre = string.IsNullOrWhiteSpace(nombre) ? e.Nombre : nombre;
+            e.Ciudad = string.IsNullOrWhiteSpace(ciudad) ? e.Ciudad : ciudad;
+            e.PaisCodigo = string.IsNullOrWhiteSpace(pais) ? e.PaisCodigo : pais;
+            if (int.TryParse(capStr, out int capacidad)) e.CapacidadTotal = capacidad;
+
+            await _estadioClient.ActualizarEstadioAsync(Program.SessionToken, e);
+            ConsoleUI.EscribirLinea("  Estadio actualizado exitosamente.", ConsoleColor.Green);
+            ConsoleUI.Pausa();
+        }
+
+        async Task EliminarEstadio()
+        {
+            if (_estadioClient == null) { SinBackend(); return; }
+            ConsoleUI.MostrarEncabezado();
+            MostrarTitulo("ELIMINAR ESTADIO");
+            var codigo = ConsoleUI.LeerTexto("  Codigo del estadio a eliminar: ");
+            var seguro = ConsoleUI.LeerTexto("  ¿Seguro? (S/N): ");
+            if (seguro.ToUpper() == "S")
+            {
+                await _estadioClient.EliminarEstadioAsync(Program.SessionToken, codigo);
+                ConsoleUI.EscribirLinea("  Estadio eliminado exitosamente.", ConsoleColor.Green);
+            }
+            ConsoleUI.Pausa();
+        }
+
+        public async Task CrudClientesBanco()
+        {
+            while (true)
+            {
+                ConsoleUI.MostrarEncabezado();
+                MostrarTitulo("ADMINISTRACION DE CLIENTES BANCO");
+                ConsoleUI.EscribirLinea("  [1] Listar Clientes", ConsoleColor.White);
+                ConsoleUI.EscribirLinea("  [2] Ver Detalle de Cliente", ConsoleColor.White);
+                ConsoleUI.EscribirLinea("  [3] Registrar Cliente en Banco", ConsoleColor.White);
+                ConsoleUI.EscribirLinea("  [4] Actualizar Cliente", ConsoleColor.White);
+                ConsoleUI.EscribirLinea("  [5] Eliminar Cliente", ConsoleColor.White);
+                ConsoleUI.EscribirLinea("  [0] Volver", ConsoleColor.DarkGray);
+                System.Console.WriteLine();
+                var op = ConsoleUI.LeerOpcion(0, 5);
+                if (op == 0) return;
+                
+                try
+                {
+                    switch (op)
+                    {
+                        case 1: await ListarClientesBanco(); break;
+                        case 2: await VerDetalleClienteBanco(); break;
+                        case 3: await CrearClienteBanco(); break;
+                        case 4: await ActualizarClienteBanco(); break;
+                        case 5: await EliminarClienteBanco(); break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ConsoleUI.EscribirLinea($"  ERROR: {ex.Message}", ConsoleColor.Red);
+                    ConsoleUI.Pausa();
+                }
+            }
+        }
+
+        async Task ListarClientesBanco()
+        {
+            if (_bancoAdminClient == null) { SinBackend(); return; }
+            ConsoleUI.MostrarEncabezado();
+            MostrarTitulo("LISTA DE CLIENTES EN CORE BANCARIO");
+            var response = await _bancoAdminClient.ListarClientesBancoAsync(Program.SessionToken);
+            if (response != null && response.Exitoso && response.Clientes != null && response.Clientes.Count > 0)
+            {
+                foreach (var c in response.Clientes)
+                    ConsoleUI.EscribirLinea($"  {c.Cedula,-12} {c.Nombre,-15} {c.Apellido,-15} {c.Estado}", ConsoleColor.White);
+            }
+            else
+            {
+                ConsoleUI.EscribirLinea("  No hay clientes registrados en el banco.", ConsoleColor.DarkGray);
+            }
+            System.Console.WriteLine();
+            ConsoleUI.Pausa();
+        }
+
+        async Task VerDetalleClienteBanco()
+        {
+            if (_bancoAdminClient == null) { SinBackend(); return; }
+            ConsoleUI.MostrarEncabezado();
+            MostrarTitulo("VER DETALLE DE CLIENTE");
+            var cedula = ConsoleUI.LeerTexto("  Cedula del cliente: ");
+            var response = await _bancoAdminClient.ObtenerClienteDetalleAsync(Program.SessionToken, cedula);
+            if (response != null && response.Exitoso)
+            {
+                ConsoleUI.EscribirLinea($"  Saldo Ahorros: ${response.SaldoAhorros}", ConsoleColor.Green);
+                if (response.Creditos != null && response.Creditos.Count > 0)
+                {
+                    ConsoleUI.EscribirLinea("  Creditos Activos:", ConsoleColor.Yellow);
+                    foreach(var c in response.Creditos)
+                    {
+                        ConsoleUI.EscribirLinea($"   - Monto: ${c.Monto} | Plazo: {c.PlazoMeses} meses | Estado: {c.Estado}", ConsoleColor.White);
+                    }
+                }
+                else
+                {
+                    ConsoleUI.EscribirLinea("  No tiene creditos registrados.", ConsoleColor.DarkGray);
+                }
+            }
+            else
+            {
+                ConsoleUI.EscribirLinea($"  {response?.Mensaje ?? "No se encontro informacion."}", ConsoleColor.Red);
+            }
+            ConsoleUI.Pausa();
+        }
+
+        async Task CrearClienteBanco()
+        {
+            if (_bancoAdminClient == null || _clienteClient == null) { SinBackend(); return; }
+            ConsoleUI.MostrarEncabezado();
+            MostrarTitulo("REGISTRAR CLIENTE EN CORE BANCARIO");
+            
+            var cedula = ConsoleUI.LeerTexto("  Cedula: ");
+            var cli = await _clienteClient.ObtenerClienteAsync(cedula);
+            if (cli == null || cli.Cedula != cedula)
+            {
+                ConsoleUI.EscribirLinea("  El cliente no existe en Ticket Premium. Registrelo primero.", ConsoleColor.Red);
+                ConsoleUI.Pausa();
+                return;
+            }
+
+            ConsoleUI.EscribirLinea($"  Nombre: {cli.Nombre} {cli.Apellido}", ConsoleColor.Cyan);
+            
+            var depositoStr = ConsoleUI.LeerTexto("  Deposito Inicial Simulado (ej. 1000): ");
+            if (decimal.TryParse(depositoStr, out decimal deposito))
+            {
+                var req = new BancoAdminService.CrearClienteBancoRequest
+                {
+                    Cedula = cli.Cedula,
+                    Nombre = cli.Nombre,
+                    Apellido = cli.Apellido,
+                    FechaNacimiento = cli.FechaNacimiento,
+                    Genero = "MASCULINO",
+                    DepositoInicial = deposito
+                };
+                
+                var res = await _bancoAdminClient.CrearClienteBancoAsync(Program.SessionToken, req);
+                if (res != null && res.Exitoso)
+                    ConsoleUI.EscribirLinea($"  Exito: {res.Mensaje}", ConsoleColor.Green);
+                else
+                    ConsoleUI.EscribirLinea($"  Error: {res?.Mensaje}", ConsoleColor.Red);
+            }
+            else
+            {
+                ConsoleUI.EscribirLinea("  Monto invalido.", ConsoleColor.Red);
+            }
+            ConsoleUI.Pausa();
+        }
+
+        async Task ActualizarClienteBanco()
+        {
+            if (_bancoAdminClient == null) { SinBackend(); return; }
+            ConsoleUI.MostrarEncabezado();
+            MostrarTitulo("ACTUALIZAR CLIENTE BANCO");
+            var cedula = ConsoleUI.LeerTexto("  Cedula a actualizar: ");
+            var estado = ConsoleUI.LeerTexto("  Nuevo estado (ACTIVO / INACTIVO): ");
+            
+            var cli = new BancoAdminService.ClienteBancoDto
+            {
+                Cedula = cedula,
+                Estado = string.IsNullOrWhiteSpace(estado) ? "ACTIVO" : estado.ToUpper()
+            };
+
+            var res = await _bancoAdminClient.ActualizarClienteBancoAsync(Program.SessionToken, cli);
+            if (res != null && res.Exitoso)
+                ConsoleUI.EscribirLinea($"  Exito: {res.Mensaje}", ConsoleColor.Green);
+            else
+                ConsoleUI.EscribirLinea($"  Error: {res?.Mensaje}", ConsoleColor.Red);
+
+            ConsoleUI.Pausa();
+        }
+
+        async Task EliminarClienteBanco()
+        {
+            if (_bancoAdminClient == null) { SinBackend(); return; }
+            ConsoleUI.MostrarEncabezado();
+            MostrarTitulo("ELIMINAR CLIENTE BANCO");
+            var cedula = ConsoleUI.LeerTexto("  Cedula a eliminar: ");
+            var seguro = ConsoleUI.LeerTexto("  ¿Seguro? Esto eliminara cuentas de ahorros y creditos (S/N): ");
+            if (seguro.ToUpper() == "S")
+            {
+                var res = await _bancoAdminClient.EliminarClienteBancoAsync(Program.SessionToken, cedula);
+                if (res != null && res.Exitoso)
+                    ConsoleUI.EscribirLinea($"  Exito: {res.Mensaje}", ConsoleColor.Green);
+                else
+                    ConsoleUI.EscribirLinea($"  Error: {res?.Mensaje}", ConsoleColor.Red);
+            }
+            ConsoleUI.Pausa();
         }
 
         void SinBackend()
@@ -607,3 +965,4 @@ namespace TicketPremium.Console.Servicios
         }
     }
 }
+

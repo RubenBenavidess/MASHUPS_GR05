@@ -1,0 +1,142 @@
+.app-shell {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background: var(--color-midnight);
+}
+
+.top-nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(10, 22, 40, 0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(200, 169, 81, 0.15);
+    padding: 3.5rem 1.5rem 1rem;
+}
+
+.main-content {
+    flex: 1;
+    padding: 1.5rem 2rem 5rem;
+    max-width: 1400px;
+    width: 100%;
+    margin: 0 auto;
+}
+
+.bottom-nav {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(10, 22, 40, 0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(200, 169, 81, 0.15);
+    padding: 0.4rem 1rem env(safe-area-inset-bottom, 0.5rem);
+    z-index: 100;
+    justify-content: space-around;
+    align-items: center;
+}
+
+.bottom-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 0.4rem 0.5rem;
+    border-radius: var(--radius-sm);
+    color: rgba(245, 240, 232, 0.4);
+    text-decoration: none;
+    font-family: var(--font-mono);
+    font-size: 0.55rem;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    transition: color var(--transition-fast);
+}
+.bottom-nav-item.active {
+    color: var(--color-gold);
+}
+.bottom-nav-item svg {
+    width: 18px;
+    height: 18px;
+}
+
+@media (max-width: 768px) {
+    .main-content { padding: 1rem 0.75rem 6rem; }
+    .bottom-nav { display: flex; }
+}
+
+@media (max-width: 480px) {
+    .main-content { padding: 0.75rem 0.5rem 6rem; }
+}
+
+/* Badge for bottom nav */
+.cart-badge-bottom {
+    position: absolute;
+    top: 0;
+    right: 15px;
+    background: var(--color-referee);
+    color: #fff;
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    font-weight: 700;
+    min-width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    padding: 0 3px;
+    letter-spacing: 0;
+}
+
+/* Dropdown UP CSS for mobile bottom nav */
+.css-dropdown-up {
+    position: relative;
+    cursor: pointer;
+}
+
+.css-dropdown-menu-up {
+    display: none;
+    position: absolute;
+    bottom: 100%;
+    right: 0;
+    margin-bottom: 0.5rem;
+    background-color: var(--color-midnight);
+    min-width: 180px;
+    box-shadow: 0 -8px 16px rgba(0,0,0,0.5);
+    z-index: 1000;
+    border: 1px solid rgba(200, 169, 81, 0.2);
+    border-radius: 4px;
+    padding: 0.5rem 0;
+}
+
+.css-dropdown-up:hover .css-dropdown-menu-up,
+.css-dropdown-up:focus-within .css-dropdown-menu-up {
+    display: flex;
+    flex-direction: column;
+}
+
+.dropdown-item {
+    padding: 0.8rem 1.2rem;
+    color: var(--color-white);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    font-size: 0.95rem;
+    font-family: var(--font-display);
+    text-transform: uppercase;
+}
+
+.dropdown-item:hover, .dropdown-item:active {
+    background-color: rgba(200, 169, 81, 0.15);
+    color: var(--color-gold);
+}
+
+.css-dropdown-divider {
+    height: 1px;
+    margin: 0.5rem 0;
+    background-color: rgba(200, 169, 81, 0.2);
+}

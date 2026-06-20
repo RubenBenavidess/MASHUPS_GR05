@@ -1,0 +1,135 @@
+@page "/admin/localidades"
+@using ec.edu.monster.TicketClient.State
+@inject AuthState AuthState
+@using LocalidadService
+@inject LocalidadServiceClient LocalidadService
+
+<h3 style="text-transform: uppercase;">Administración de Localidades</h3>
+<p style="color: rgba(245,240,232,0.6); font-size: 0.9rem;">
+    Esta pantalla permite gestionar las localidades disponibles en los estadios.
+</p>
+
+<!-- Tabs -->
+<ul class="nav nav-tabs" style="margin-top: 1.5rem; border-bottom: 2px solid var(--color-gold);">
+    <li class="nav-item">
+        <a class="nav-link @(activeTab == "listar" ? "active" : "")" style="cursor: pointer; background-color: @(activeTab == "listar" ? "var(--color-gold)" : "transparent"); color: @(activeTab == "listar" ? "black" : "white"); font-weight: bold;" @onclick='() => SetActiveTab("listar")'>Ver Localidades</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link @(activeTab == "registrar" ? "active" : "")" style="cursor: pointer; background-color: @(activeTab == "registrar" ? "var(--color-gold)" : "transparent"); color: @(activeTab == "registrar" ? "black" : "white"); font-weight: bold;" @onclick='() => SetActiveTab("registrar")'>Registrar Localidad</a>
+    </li>
+</ul>
+
+<div class="card" style="margin-top: 1.5rem;">
+    <div class="card-body">
+        @if (activeTab == "listar")
+        {
+            <h4>Localidades Registradas</h4>
+            @if (localidades == null)
+            {
+                <p><em>Cargando...</em></p>
+            }
+            else
+            {
+                <table class="table table-dark table-hover" style="margin-top: 1rem;">
+                    <thead>
+                        <tr>
+                            <th style="color: var(--color-gold);">Código</th>
+                            <th style="color: var(--color-gold);">Descripción</th>
+                            <th style="color: var(--color-gold);">Capacidad</th>
+                            <th style="color: var(--color-gold);">Precio Base</th>
+                            <th style="color: var(--color-gold);">Estadio</th>
+                            <th style="color: var(--color-gold); text-align: center;">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var loc in localidades)
+                        {
+                            <tr>
+                                <td>@loc.Codigo</td>
+                                <td>@loc.Descripcion</td>
+                                <td>@loc.Capacidad</td>
+                                <td>$@loc.PrecioBase.ToString("0.00")</td>
+                                <td>@loc.EstadioCodigo</td>
+                                <td style="text-align: center; display: flex; gap: 0.5rem; justify-content: center;">
+                                    <button class="btn btn-sm btn-danger" @onclick="() => EliminarLocalidad(loc.Codigo)" title="Eliminar Localidad">🗑️</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        }
+        else if (activeTab == "registrar")
+        {
+            <h4>Crear Nueva Localidad</h4>
+            <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem; margin-bottom: 1rem; margin-top: 1rem;">
+                <div class="form-group">
+                    <label style="display: block; font-size: 0.85rem; color: rgba(245,240,232,0.6); margin-bottom: 0.4rem;">Código:</label>
+                    <input @bind="nuevaLocalidad.Codigo" class="form-control" placeholder="Ej. LOC-01" />
+                </div>
+                <div class="form-group">
+                    <label style="display: block; font-size: 0.85rem; color: rgba(245,240,232,0.6); margin-bottom: 0.4rem;">Descripción:</label>
+                    <input @bind="nuevaLocalidad.Descripcion" class="form-control" placeholder="Ej. Tribuna Norte" />
+                </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+                <div class="form-group">
+                    <label style="display: block; font-size: 0.85rem; color: rgba(245,240,232,0.6); margin-bottom: 0.4rem;">Capacidad:</label>
+                    <input type="number" @bind="nuevaLocalidad.Capacidad" class="form-control" />
+                </div>
+                <div class="form-group">
+                    <label style="display: block; font-size: 0.85rem; color: rgba(245,240,232,0.6); margin-bottom: 0.4rem;">Precio Base:</label>
+                    <div style="display:flex; align-items:center;">
+                        <span style="font-size: 1.2rem; margin-right: 0.5rem; color: var(--color-gold);">$</span>
+                        <input type="number" step="0.01" @bind="nuevaLocalidad.PrecioBase" class="form-control" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label style="display: block; font-size: 0.85rem; color: rgba(245,240,232,0.6); margin-bottom: 0.4rem;">Código Estadio:</label>
+                    <input @bind="nuevaLocalidad.EstadioCodigo" class="form-control" placeholder="Ej. EST-01" />
+                </div>
+            </div>
+            
+            <button class="btn btn-primary" @onclick="CrearLocalidad" style="width: 100%; padding: 0.8rem; font-weight: bold;">
+                Registrar Localidad
+            </button>
+        }
+    </div>
+</div>
+
+@code {
+    private string activeTab = "listar";
+    private List<LocalidadDto> localidades;
+    private LocalidadDto nuevaLocalidad = new LocalidadDto();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarLocalidades();
+    }
+
+    private void SetActiveTab(string tab)
+    {
+        activeTab = tab;
+    }
+
+    private async Task CargarLocalidades()
+    {
+        var result = await LocalidadService.ListarLocalidadesAsync(AuthState.Token);
+        localidades = result.ToList();
+    }
+
+    private async Task CrearLocalidad()
+    {
+        await LocalidadService.CrearLocalidadAsync(AuthState.Token, nuevaLocalidad);
+        nuevaLocalidad = new LocalidadDto();
+        await CargarLocalidades();
+        SetActiveTab("listar");
+    }
+
+    private async Task EliminarLocalidad(string codigo)
+    {
+        await LocalidadService.EliminarLocalidadAsync(AuthState.Token, codigo);
+        await CargarLocalidades();
+    }
+}

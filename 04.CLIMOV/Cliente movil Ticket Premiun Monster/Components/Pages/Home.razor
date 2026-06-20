@@ -1,0 +1,108 @@
+@page "/"
+@inject NavigationManager NavManager
+
+<div class="home-hero animate-in" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:2rem;">
+    <div style="flex:1; min-width:300px;">
+        <h1>
+            Mundial de Fútbol
+            <span style="display:block;font-size:2rem;color:var(--color-gold);margin-top:0.2rem;">2026</span>
+        </h1>
+        <p class="subtitle">
+            Vive la emoción del torneo más grande del planeta.
+            Reserva tus boletos en los estadios más icónicos de Norteamérica.
+        </p>
+        <div class="stats-row">
+            <div class="stat-item">
+                <span class="stat-number">3</span>
+                <span class="stat-label">Países Sede</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">48</span>
+                <span class="stat-label">Selecciones</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">104</span>
+                <span class="stat-label">Partidos</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">16</span>
+                <span class="stat-label">Estadios</span>
+            </div>
+        </div>
+        <div style="margin-top:2rem;">
+            <button class="btn btn-primary btn-lg" @onclick="IrAPartidos">
+                Ver Partidos Disponibles
+            </button>
+        </div>
+    </div>
+    <div style="flex:1 1 300px; text-align:center; max-width:100%;">
+        <img src="/images/sullivan_computer.jpg" alt="Sullivan" style="width:100%; max-width:450px; height:auto; object-fit:contain; border-radius:12px; border: 2px solid var(--color-gold); box-shadow: 0 4px 15px rgba(200, 169, 81, 0.2);" />
+    </div>
+</div>
+
+<div style="display:flex; gap:1.5rem; overflow-x:auto; padding-bottom:1rem; scroll-snap-type:x mandatory; scroll-behavior:smooth;" class="stadium-carousel hide-scrollbar">
+    @foreach (var s in Stadiums)
+    {
+        <div class="card animate-in" style="flex:0 0 calc(33.333% - 1rem); scroll-snap-align:start; min-width:300px;">
+            <div class="card-body">
+                <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.5rem;">
+                    <svg width="36" height="36" viewBox="0 0 48 48" fill="none" style="flex-shrink: 0;">
+                        <rect x="6" y="6" width="36" height="36" rx="6" stroke="#C8A951" stroke-width="2"/>
+                        <path d="M16 12v24M32 12v24M12 16h24M12 32h24" stroke="#C8A951" stroke-width="0.8" opacity="0.5"/>
+                        <circle cx="24" cy="24" r="6" stroke="#C8A951" stroke-width="1.5" fill="none"/>
+                        <circle cx="24" cy="24" r="1.5" fill="#C8A951"/>
+                    </svg>
+                    <h4 style="margin:0;font-size:1.05rem;">@s.Name</h4>
+                </div>
+                <div style="font-family:var(--font-mono);font-size:0.7rem;color:var(--color-gold);margin-bottom:0.8rem;text-transform:uppercase;">
+                    FIFA: @s.FifaName
+                </div>
+                <p class="card-subtitle">@s.City</p>
+                <p class="card-text" style="font-size:0.85rem;">@s.Desc</p>
+                <div style="font-family:var(--font-mono);font-size:0.75rem;color:rgba(200,169,81,0.8);margin-top:auto;padding-top:0.5rem;">
+                    @s.Extras
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    .hide-scrollbar::-webkit-scrollbar { height: 8px; }
+    .hide-scrollbar::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.05); border-radius: 4px; }
+    .hide-scrollbar::-webkit-scrollbar-thumb { background: rgba(200, 169, 81, 0.6); border-radius: 4px; }
+    .hide-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(200, 169, 81, 1); }
+    .stadium-carousel { padding-top: 0.5rem; }
+    .stadium-carousel .card { display: flex; flex-direction: column; }
+    .stadium-carousel .card-body { display: flex; flex-direction: column; height: 100%; }
+</style>
+
+<div style="text-align:center;margin-top:3rem;padding:2rem;color:rgba(245,240,232,0.3);font-family:var(--font-mono);font-size:0.7rem;">
+    FIFA World Cup 2026 &copy; · USA · México · Canadá · TicketPremium Oficial
+</div>
+
+@code {
+    private void IrAPartidos() => NavManager.NavigateTo("/partidos");
+
+    private record StadiumInfo(string Name, string FifaName, string City, string Desc, string Extras);
+
+    private List<StadiumInfo> Stadiums = new()
+    {
+        new("Estadio Azteca", "Estadio Azteca Mexico City", "Ciudad de México", "El Coloso de Santa Úrsula. Capacidad para 87,523 espectadores. Sede del partido inaugural.", "Localidades: Palco, Tribuna y General · Desde $100 USD"),
+        new("MetLife Stadium", "New York New Jersey Stadium", "East Rutherford, NJ", "Sede de la gran final del torneo. 82,500 asientos disponibles.", "Localidades: Palco, Tribuna y General · Desde $100 USD"),
+        new("AT&T Stadium", "Dallas Stadium", "Arlington, TX", "Hogar de los Cowboys. Capacidad inmensa para 80,000 asientos.", "Localidades: Palco, Tribuna y General · Desde $100 USD"),
+        new("Arrowhead Stadium", "Kansas City Stadium", "Kansas City, MO", "Conocido por ser el estadio más ruidoso del mundo. 76,416 asientos.", "Localidades: Palco, Tribuna y General · Desde $100 USD"),
+        new("NRG Stadium", "Houston Stadium", "Houston, TX", "Estadio con techo retráctil y tecnología avanzada. 72,220 asientos.", "Localidades: Palco, Tribuna y General · Desde $100 USD"),
+        new("Mercedes-Benz Stadium", "Atlanta Stadium", "Atlanta, GA", "Maravilla arquitectónica moderna con techo retráctil. 71,000 asientos.", "Localidades: Palco, Tribuna y General · Desde $100 USD"),
+        new("SoFi Stadium", "Los Angeles Stadium", "Inglewood, CA", "Tecnología de punta y pantallas 360 grados. 70,240 asientos.", "Localidades: Palco, Tribuna y General · Desde $100 USD"),
+        new("Lincoln Financial Field", "Philadelphia Stadium", "Filadelfia, PA", "Sede de eventos históricos en la costa este. 69,796 asientos.", "Localidades: Palco, Tribuna y General · Desde $100 USD"),
+        new("Lumen Field", "Seattle Stadium", "Seattle, WA", "Gran ambiente y vistas hermosas a la ciudad. 69,000 asientos.", "Localidades: Palco, Tribuna y General · Desde $100 USD"),
+        new("Levi's Stadium", "San Francisco Bay Area Stadium", "Santa Clara, CA", "Estadio ecológico y de alta tecnología. 68,500 asientos.", "Localidades: Palco, Tribuna y General · Desde $100 USD"),
+        new("Gillette Stadium", "Boston Stadium", "Foxborough, MA", "Estadio icónico de la región de Nueva Inglaterra. 65,878 asientos.", "Localidades: Palco, Tribuna y General · Desde $100 USD"),
+        new("Hard Rock Stadium", "Miami Stadium", "Miami Gardens, FL", "Destino turístico mundial para grandes eventos. 64,767 asientos.", "Localidades: Palco, Tribuna y General · Desde $100 USD"),
+        new("BC Place", "BC Place Vancouver", "Vancouver, BC", "Techo retráctil en el corazón de la hermosa ciudad. 54,500 asientos.", "Localidades: Palco, Tribuna y General · Desde $100 USD"),
+        new("Estadio BBVA", "Estadio Monterrey", "Guadalupe, NL", "Apodado 'El Gigante de Acero' con vista al Cerro de la Silla. 53,500 asientos.", "Localidades: Palco, Tribuna y General · Desde $100 USD"),
+        new("Estadio Akron", "Estadio Guadalajara", "Zapopan, JAL", "Diseño ecológico inspirado en un volcán. 49,850 asientos.", "Localidades: Palco, Tribuna y General · Desde $100 USD"),
+        new("BMO Field", "Toronto Stadium", "Toronto, ON", "Principal estadio de fútbol en Canadá, expandido para el Mundial. 45,000 asientos.", "Localidades: Palco, Tribuna y General · Desde $100 USD")
+    };
+}

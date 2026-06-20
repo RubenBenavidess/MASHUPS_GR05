@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="../04.CLIWEB/TicketPremium.Web/TicketPremium.Web.csproj" />
+  <Project Path="Cliente Escritorio Ticket Premium Monster/Cliente Escritorio Ticket Premium Monster.csproj" />
+</Solution>

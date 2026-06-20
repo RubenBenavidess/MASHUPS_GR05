@@ -61,7 +61,7 @@ public class FifaDbContext : DbContext
             entity.Property(e => e.LocalidadPartidoCodigo).HasMaxLength(50).IsRequired();
         });
 
-        SeedData(modelBuilder);
+        // SeedData(modelBuilder); // Desactivado para permitir scripts manuales
     }
 
     private static void SeedData(ModelBuilder modelBuilder)

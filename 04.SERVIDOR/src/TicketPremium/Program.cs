@@ -14,10 +14,7 @@ public class Program
     {
         var builder = WebApplication.CreateBuilder(args);
 
-        builder.WebHost.UseKestrel(options =>
-        {
-            options.ListenLocalhost(9099);
-        });
+
 
         builder.Services.AddServiceModelServices();
 
@@ -32,7 +29,9 @@ public class Program
         builder.Services.AddScoped<FacturaService>();
         builder.Services.AddScoped<ReporteService>();
         builder.Services.AddScoped<CompraService>();
+        builder.Services.AddScoped<BancoAdminService>();
         builder.Services.AddScoped<AuthService>();
+        builder.Services.AddScoped<AsientoService>();
 
         builder.Services.AddSingleton<FifaSoapClient>();
         builder.Services.AddSingleton<BancoSoapClient>();
@@ -47,7 +46,8 @@ public class Program
         });
 
         builder.Services.AddScoped<IFacturaService>(sp => sp.GetRequiredService<FacturaService>());
-
+        builder.Services.AddScoped<ICompraService>(sp => sp.GetRequiredService<CompraService>());
+        builder.Services.AddScoped<IBancoAdminService>(sp => sp.GetRequiredService<BancoAdminService>());
         builder.Services.AddServiceModelMetadata();
 
         var app = builder.Build();
@@ -95,9 +95,17 @@ public class Program
             serviceBuilder.AddServiceEndpoint<CompraService, ICompraService>(
                 new BasicHttpBinding(), "/CompraService.svc");
 
+            serviceBuilder.AddService<BancoAdminService>();
+            serviceBuilder.AddServiceEndpoint<BancoAdminService, IBancoAdminService>(
+                new BasicHttpBinding(), "/BancoAdminService.svc");
+
             serviceBuilder.AddService<AuthService>();
             serviceBuilder.AddServiceEndpoint<AuthService, IAuthService>(
                 new BasicHttpBinding(), "/AuthService.svc");
+
+            serviceBuilder.AddService<AsientoService>();
+            serviceBuilder.AddServiceEndpoint<AsientoService, IAsientoService>(
+                new BasicHttpBinding(), "/AsientoService.svc");
         });
 
         app.Run();
