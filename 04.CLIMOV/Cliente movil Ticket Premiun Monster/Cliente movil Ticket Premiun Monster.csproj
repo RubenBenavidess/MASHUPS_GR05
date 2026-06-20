@@ -26,7 +26,7 @@
                <MauiXaml Update="MyPage.xaml" Inflator="Runtime" /> (force runtime inflation) -->
     <MauiXamlInflator>SourceGen</MauiXamlInflator>
     <!-- Display name -->
-    <ApplicationTitle>Cliente movil Ticket Premiun Monster</ApplicationTitle>
+    <ApplicationTitle>Ticket Premium Monster</ApplicationTitle>
     <!-- App Identifier -->
     <ApplicationId>com.companyname.ec.edu.monster.ticketclient</ApplicationId>
     <!-- Versions -->
@@ -42,9 +42,9 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- App Icon -->
-    <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
+    <MauiIcon Include="Resources\AppIcon\sullivan_icon.jpg" Color="#000000" />
     <!-- Splash Screen -->
-    <MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#512BD4" BaseSize="128,128" />
+    <MauiSplashScreen Include="Resources\Splash\sullivan_splash.jpg" Color="#000000" BaseSize="128,128" />
     <!-- Images -->
     <MauiImage Include="Resources\Images\*" />
     <MauiImage Update="Resources\Images\dotnet_bot.svg" BaseSize="168,208" />

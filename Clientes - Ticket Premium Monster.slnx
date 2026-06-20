@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/04.CLICON/">
+    <Project Path="04.CLICON/Cliente Consola Ticket Premium Monster/Cliente Consola Ticket Premium Monster.csproj" />
+  </Folder>
+  <Folder Name="/04.CLIESC/">
+    <Project Path="04.CLIESC/Cliente Escritorio Ticket Premium Monster/Cliente Escritorio Ticket Premium Monster.csproj" />
+  </Folder>
+  <Folder Name="/04.CLIMOV/">
+    <Project Path="04.CLIMOV/Cliente movil Ticket Premiun Monster/Cliente movil Ticket Premiun Monster.csproj" />
+  </Folder>
+  <Folder Name="/04.CLIWEB/">
+    <Project Path="04.CLIWEB/Cliente Web Ticket Premium Monster/Cliente Web Ticket Premium Monster.csproj" />
+  </Folder>
+</Solution>
