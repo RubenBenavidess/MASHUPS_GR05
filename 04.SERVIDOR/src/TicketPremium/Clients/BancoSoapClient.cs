@@ -133,7 +133,7 @@ public class BancoSoapClient
   <s:Body>
     <RegistrarCredito xmlns=""http://tempuri.org/"">
       <cedula>{EscapeXml(cedula)}</cedula>
-      <monto>{monto}</monto>
+      <monto>{monto.ToString(System.Globalization.CultureInfo.InvariantCulture)}</monto>
       <plazoMeses>{plazoMeses}</plazoMeses>
     </RegistrarCredito>
   </s:Body>
@@ -151,7 +151,7 @@ public class BancoSoapClient
         var fault = doc.Descendants(s + "Fault").FirstOrDefault();
         if (fault != null)
         {
-            var faultString = fault.Element(s + "faultstring")?.Value ?? "Fault desconocido";
+            var faultString = fault.Descendants().FirstOrDefault(e => e.Name.LocalName == "faultstring")?.Value ?? responseBody;
             _logger.LogWarning("[{Timestamp}] BANCO_CLIENT=RegistrarCredito | Result=Fault | FaultString={FaultString}", ts, faultString);
             return (false, 0, faultString, new List<AmortizacionDto>());
         }
@@ -215,7 +215,7 @@ public class BancoSoapClient
       <apellido>{EscapeXml(apellido)}</apellido>
       <fechaNacimiento>{fechaNacimiento.ToString("yyyy-MM-ddTHH:mm:ss")}</fechaNacimiento>
       <genero>{EscapeXml(genero)}</genero>
-      <depositoInicial>{depositoInicial}</depositoInicial>
+      <depositoInicial>{depositoInicial.ToString(System.Globalization.CultureInfo.InvariantCulture)}</depositoInicial>
     </CrearClienteConCuenta>
   </s:Body>
 </s:Envelope>";
@@ -453,6 +453,10 @@ public class BancoSoapClient
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogWarning("[{Timestamp}] BANCO_CLIENT={Operation} | Result=Fail | HTTP_Error={StatusCode}", ts, operation, (int)response.StatusCode);
+                if ((int)response.StatusCode == 500 && responseBody.Contains("Fault"))
+                {
+                    return (true, responseBody); // Let the caller parse the Fault XML
+                }
                 return (false, $"Error HTTP: {(int)response.StatusCode}");
             }
 

@@ -1,4 +1,4 @@
-﻿USE [TicketPremiumDB]
+USE [TicketPremiumDB]
 GO
 
 -- ============================================================
@@ -157,94 +157,98 @@ GO
 -- ============================================================
 -- Localidades y Asientos (Generación Automática)
 -- ============================================================
-DECLARE @estId NVARCHAR(20);
-DECLARE @capacidad INT;
-
-DECLARE cursor_estadios CURSOR FOR SELECT [Codigo], [CapacidadTotal] FROM [dbo].[Estadios];
-OPEN cursor_estadios;
-FETCH NEXT FROM cursor_estadios INTO @estId, @capacidad;
-WHILE @@FETCH_STATUS = 0
 BEGIN
-    INSERT INTO [dbo].[Localidades] ([Codigo], [Descripcion], [Capacidad], [PrecioBase], [EstadioCodigo]) VALUES
-    (N'L-' + REPLACE(@estId, 'EST-', '') + N'-1', N'Palco VIP Norte', @capacidad * 0.05, 450.00, @estId),
-    (N'L-' + REPLACE(@estId, 'EST-', '') + N'-2', N'Palco VIP Sur', @capacidad * 0.05, 450.00, @estId),
-    (N'L-' + REPLACE(@estId, 'EST-', '') + N'-3', N'Tribuna Lateral', @capacidad * 0.30, 250.00, @estId),
-    (N'L-' + REPLACE(@estId, 'EST-', '') + N'-4', N'General Cabecera Norte', @capacidad * 0.30, 100.00, @estId),
-    (N'L-' + REPLACE(@estId, 'EST-', '') + N'-5', N'General Cabecera Sur', @capacidad * 0.30, 100.00, @estId);
+    DECLARE @estId NVARCHAR(20);
+    DECLARE @capacidad INT;
+
+    DECLARE cursor_estadios CURSOR FOR SELECT [Codigo], [CapacidadTotal] FROM [dbo].[Estadios];
+    OPEN cursor_estadios;
     FETCH NEXT FROM cursor_estadios INTO @estId, @capacidad;
+    WHILE @@FETCH_STATUS = 0
+    BEGIN
+        INSERT INTO [dbo].[Localidades] ([Codigo], [Descripcion], [Capacidad], [PrecioBase], [EstadioCodigo]) VALUES
+        (N'L-' + REPLACE(@estId, 'EST-', '') + N'-1', N'Palco VIP Norte', @capacidad * 0.05, 450.00, @estId),
+        (N'L-' + REPLACE(@estId, 'EST-', '') + N'-2', N'Palco VIP Sur', @capacidad * 0.05, 450.00, @estId),
+        (N'L-' + REPLACE(@estId, 'EST-', '') + N'-3', N'Tribuna Lateral', @capacidad * 0.30, 250.00, @estId),
+        (N'L-' + REPLACE(@estId, 'EST-', '') + N'-4', N'General Cabecera Norte', @capacidad * 0.30, 100.00, @estId),
+        (N'L-' + REPLACE(@estId, 'EST-', '') + N'-5', N'General Cabecera Sur', @capacidad * 0.30, 100.00, @estId);
+        FETCH NEXT FROM cursor_estadios INTO @estId, @capacidad;
+    END
+    CLOSE cursor_estadios;
+    DEALLOCATE cursor_estadios;
 END
-CLOSE cursor_estadios;
-DEALLOCATE cursor_estadios;
 GO
 
-DECLARE @partidoId NVARCHAR(20);
-DECLARE @estId NVARCHAR(20);
-DECLARE @locFifaId NVARCHAR(50);
-DECLARE @locTkId NVARCHAR(50);
-
-DECLARE cursor_partidos CURSOR FOR 
-SELECT p.[Codigo], p.[EstadioCodigo] FROM [dbo].[Partidos] p;
-OPEN cursor_partidos;
-FETCH NEXT FROM cursor_partidos INTO @partidoId, @estId;
-WHILE @@FETCH_STATUS = 0
 BEGIN
-    -- 1. Palco VIP Norte (10)
-    SET @locFifaId = N'L-' + @partidoId + N'-1';
-    SET @locTkId = N'L-' + REPLACE(@estId, 'EST-', '') + N'-1';
-    INSERT INTO [dbo].[Asientos] ([Codigo], [Fila], [Numero], [Estado], [LocalidadCodigo], [PartidoCodigo])
-    SELECT N'AS-' + @locFifaId + N'-A' + CAST(N AS NVARCHAR), N'A', N, N'LIBRE', @locTkId, @partidoId
-    FROM (VALUES (1),(2),(3),(4),(5),(6),(7),(8),(9),(10)) T(N);
+    DECLARE @partidoId NVARCHAR(20);
+    DECLARE @estId NVARCHAR(20);
+    DECLARE @locFifaId NVARCHAR(50);
+    DECLARE @locTkId NVARCHAR(50);
 
-    -- 2. Palco VIP Sur (10)
-    SET @locFifaId = N'L-' + @partidoId + N'-2';
-    SET @locTkId = N'L-' + REPLACE(@estId, 'EST-', '') + N'-2';
-    INSERT INTO [dbo].[Asientos] ([Codigo], [Fila], [Numero], [Estado], [LocalidadCodigo], [PartidoCodigo])
-    SELECT N'AS-' + @locFifaId + N'-A' + CAST(N AS NVARCHAR), N'A', N, N'LIBRE', @locTkId, @partidoId
-    FROM (VALUES (1),(2),(3),(4),(5),(6),(7),(8),(9),(10)) T(N);
-
-    -- 3. Tribuna Lateral (70)
-    SET @locFifaId = N'L-' + @partidoId + N'-3';
-    SET @locTkId = N'L-' + REPLACE(@estId, 'EST-', '') + N'-3';
-    DECLARE @fila INT = 1;
-    WHILE @fila <= 5
-    BEGIN
-        DECLARE @letraFila3 NVARCHAR(1) = CHAR(64 + @fila);
-        INSERT INTO [dbo].[Asientos] ([Codigo], [Fila], [Numero], [Estado], [LocalidadCodigo], [PartidoCodigo])
-        SELECT N'AS-' + @locFifaId + N'-' + @letraFila3 + CAST(N AS NVARCHAR), @letraFila3, N, N'LIBRE', @locTkId, @partidoId
-        FROM (VALUES (1),(2),(3),(4),(5),(6),(7),(8),(9),(10),(11),(12),(13),(14)) T(N);
-        SET @fila = @fila + 1;
-    END
-
-    -- 4. General Cabecera Norte (70)
-    SET @locFifaId = N'L-' + @partidoId + N'-4';
-    SET @locTkId = N'L-' + REPLACE(@estId, 'EST-', '') + N'-4';
-    SET @fila = 1;
-    WHILE @fila <= 5
-    BEGIN
-        DECLARE @letraFila NVARCHAR(1) = CHAR(64 + @fila);
-        INSERT INTO [dbo].[Asientos] ([Codigo], [Fila], [Numero], [Estado], [LocalidadCodigo], [PartidoCodigo])
-        SELECT N'AS-' + @locFifaId + N'-' + @letraFila + CAST(N AS NVARCHAR), @letraFila, N, N'LIBRE', @locTkId, @partidoId
-        FROM (VALUES (1),(2),(3),(4),(5),(6),(7),(8),(9),(10),(11),(12),(13),(14)) T(N);
-        SET @fila = @fila + 1;
-    END
-
-    -- 5. General Cabecera Sur (70)
-    SET @locFifaId = N'L-' + @partidoId + N'-5';
-    SET @locTkId = N'L-' + REPLACE(@estId, 'EST-', '') + N'-5';
-    SET @fila = 1;
-    WHILE @fila <= 5
-    BEGIN
-        DECLARE @letraFila2 NVARCHAR(1) = CHAR(64 + @fila);
-        INSERT INTO [dbo].[Asientos] ([Codigo], [Fila], [Numero], [Estado], [LocalidadCodigo], [PartidoCodigo])
-        SELECT N'AS-' + @locFifaId + N'-' + @letraFila2 + CAST(N AS NVARCHAR), @letraFila2, N, N'LIBRE', @locTkId, @partidoId
-        FROM (VALUES (1),(2),(3),(4),(5),(6),(7),(8),(9),(10),(11),(12),(13),(14)) T(N);
-        SET @fila = @fila + 1;
-    END
-
+    DECLARE cursor_partidos CURSOR FOR 
+    SELECT p.[Codigo], p.[EstadioCodigo] FROM [dbo].[Partidos] p;
+    OPEN cursor_partidos;
     FETCH NEXT FROM cursor_partidos INTO @partidoId, @estId;
+    WHILE @@FETCH_STATUS = 0
+    BEGIN
+        -- 1. Palco VIP Norte (10)
+        SET @locFifaId = N'L-' + @partidoId + N'-1';
+        SET @locTkId = N'L-' + REPLACE(@estId, 'EST-', '') + N'-1';
+        INSERT INTO [dbo].[Asientos] ([Codigo], [Fila], [Numero], [Estado], [LocalidadCodigo], [PartidoCodigo])
+        SELECT N'AS-' + @locFifaId + N'-A' + CAST(N AS NVARCHAR), N'A', N, N'LIBRE', @locTkId, @partidoId
+        FROM (VALUES (1),(2),(3),(4),(5),(6),(7),(8),(9),(10)) T(N);
+
+        -- 2. Palco VIP Sur (10)
+        SET @locFifaId = N'L-' + @partidoId + N'-2';
+        SET @locTkId = N'L-' + REPLACE(@estId, 'EST-', '') + N'-2';
+        INSERT INTO [dbo].[Asientos] ([Codigo], [Fila], [Numero], [Estado], [LocalidadCodigo], [PartidoCodigo])
+        SELECT N'AS-' + @locFifaId + N'-A' + CAST(N AS NVARCHAR), N'A', N, N'LIBRE', @locTkId, @partidoId
+        FROM (VALUES (1),(2),(3),(4),(5),(6),(7),(8),(9),(10)) T(N);
+
+        -- 3. Tribuna Lateral (70)
+        SET @locFifaId = N'L-' + @partidoId + N'-3';
+        SET @locTkId = N'L-' + REPLACE(@estId, 'EST-', '') + N'-3';
+        DECLARE @fila INT = 1;
+        WHILE @fila <= 5
+        BEGIN
+            DECLARE @letraFila3 NVARCHAR(1) = CHAR(64 + @fila);
+            INSERT INTO [dbo].[Asientos] ([Codigo], [Fila], [Numero], [Estado], [LocalidadCodigo], [PartidoCodigo])
+            SELECT N'AS-' + @locFifaId + N'-' + @letraFila3 + CAST(N AS NVARCHAR), @letraFila3, N, N'LIBRE', @locTkId, @partidoId
+            FROM (VALUES (1),(2),(3),(4),(5),(6),(7),(8),(9),(10),(11),(12),(13),(14)) T(N);
+            SET @fila = @fila + 1;
+        END
+
+        -- 4. General Cabecera Norte (70)
+        SET @locFifaId = N'L-' + @partidoId + N'-4';
+        SET @locTkId = N'L-' + REPLACE(@estId, 'EST-', '') + N'-4';
+        SET @fila = 1;
+        WHILE @fila <= 5
+        BEGIN
+            DECLARE @letraFila NVARCHAR(1) = CHAR(64 + @fila);
+            INSERT INTO [dbo].[Asientos] ([Codigo], [Fila], [Numero], [Estado], [LocalidadCodigo], [PartidoCodigo])
+            SELECT N'AS-' + @locFifaId + N'-' + @letraFila + CAST(N AS NVARCHAR), @letraFila, N, N'LIBRE', @locTkId, @partidoId
+            FROM (VALUES (1),(2),(3),(4),(5),(6),(7),(8),(9),(10),(11),(12),(13),(14)) T(N);
+            SET @fila = @fila + 1;
+        END
+
+        -- 5. General Cabecera Sur (70)
+        SET @locFifaId = N'L-' + @partidoId + N'-5';
+        SET @locTkId = N'L-' + REPLACE(@estId, 'EST-', '') + N'-5';
+        SET @fila = 1;
+        WHILE @fila <= 5
+        BEGIN
+            DECLARE @letraFila2 NVARCHAR(1) = CHAR(64 + @fila);
+            INSERT INTO [dbo].[Asientos] ([Codigo], [Fila], [Numero], [Estado], [LocalidadCodigo], [PartidoCodigo])
+            SELECT N'AS-' + @locFifaId + N'-' + @letraFila2 + CAST(N AS NVARCHAR), @letraFila2, N, N'LIBRE', @locTkId, @partidoId
+            FROM (VALUES (1),(2),(3),(4),(5),(6),(7),(8),(9),(10),(11),(12),(13),(14)) T(N);
+            SET @fila = @fila + 1;
+        END
+
+        FETCH NEXT FROM cursor_partidos INTO @partidoId, @estId;
+    END
+    CLOSE cursor_partidos;
+    DEALLOCATE cursor_partidos;
 END
-CLOSE cursor_partidos;
-DEALLOCATE cursor_partidos;
 GO
 
 

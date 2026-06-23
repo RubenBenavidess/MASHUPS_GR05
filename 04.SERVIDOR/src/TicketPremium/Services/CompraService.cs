@@ -25,6 +25,7 @@ public class CompraService : ICompraService
         var ts = Now();
         _logger.LogInformation("[{T}] ComprarEnEfectivo | codigos={C}, cedula={CL}", ts, string.Join(",", codigosAsiento), clienteCedula);
         var reservados = new List<string>();
+        using var transaction = await _db.Database.BeginTransactionAsync();
 
         try
         {
@@ -58,12 +59,15 @@ public class CompraService : ICompraService
             }
             await _db.SaveChangesAsync();
 
+            await transaction.CommitAsync();
+
             _logger.LogInformation("[{T}] ComprarEnEfectivo=OK | Factura={F}", ts, facturaResponse.Numero);
             return new CompraResponse { Exitoso = true, NumeroFactura = facturaResponse.Numero, Mensaje = "Compra en efectivo exitosa" };
         }
-        catch (FaultException) { throw; }
+        catch (FaultException) { await transaction.RollbackAsync(); throw; }
         catch (Exception ex)
         {
+            await transaction.RollbackAsync();
             _logger.LogError(ex, "[{T}] ComprarEnEfectivo=Error", ts);
             throw new FaultException(new FaultReason("Error inesperado en la compra en efectivo. Por favor, intente más tarde."), new FaultCode("ErrorInterno"));
         }
@@ -75,6 +79,7 @@ public class CompraService : ICompraService
         var ts = Now();
         _logger.LogInformation("[{T}] ComprarACredito | codigos={C}, cedula={CL}, plazo={P}", ts, string.Join(",", codigosAsiento), clienteCedula, plazoMeses);
         var reservados = new List<string>();
+        using var transaction = await _db.Database.BeginTransactionAsync();
 
         try
         {
@@ -144,6 +149,8 @@ public class CompraService : ICompraService
                 FechaPago = a.FechaPago
             }).ToList();
 
+            await transaction.CommitAsync();
+
             _logger.LogInformation("[{T}] ComprarACredito=OK | Credito={C}", ts, registroCredito.CreditoCodigo);
             return new CompraResponse 
             { 
@@ -153,9 +160,10 @@ public class CompraService : ICompraService
                 Amortizaciones = dtos
             };
         }
-        catch (FaultException) { throw; }
+        catch (FaultException) { await transaction.RollbackAsync(); throw; }
         catch (Exception ex)
         {
+            await transaction.RollbackAsync();
             _logger.LogError(ex, "[{T}] ComprarACredito=Error", ts);
             throw new FaultException(new FaultReason("Error inesperado en la compra a credito"), new FaultCode("ErrorInterno"));
         }
